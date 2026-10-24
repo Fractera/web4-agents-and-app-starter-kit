@@ -16,6 +16,19 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const modes = createRequire(import.meta.url)(join(ROOT, 'lib', 'agent-kit', 'modes.cjs'))
+
+/** 591: без файлов режима — есть душа: файл «душа + фраза»; души нет: фраза строкой, как до 552-5. */
+function soulAhead(dir) {
+  const out = mkdtempSync(join(tmpdir(), 'check-modes-'))
+  try {
+    const args = modes.promptArgs(dir, 'build', out, 'unused')
+    const soul = modes.soulText()
+    if (!soul) return args[0] === '--append-system-prompt'
+    return args[0] === '--append-system-prompt-file' && readFileSync(args[1], 'utf8').startsWith(soul)
+  } finally {
+    rmSync(out, { recursive: true, force: true })
+  }
+}
 const MODES = ['build', 'work', 'messenger']
 const problems = []
 const dirs = (p) => (existsSync(p) ? readdirSync(p, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name) : [])
@@ -57,16 +70,19 @@ for (const { name, dir } of elements) {
     try { native = JSON.parse(readFileSync(join(dir, 'OWN-SERVICE-PROPS', 'OWN-SERVICE-PROPS.json'), 'utf8')).elementType === 'native' } catch { /* нет паспорта */ }
     const pairs = [['build', '## Steps', '## Cron automations'], ['work', '## Cron automations', '## Steps']]
     for (const [mode, own, foreign] of native ? pairs.slice(0, 1) : pairs) {
+      // 591: файл подсказки теперь есть и без файла режима (в нём душа) — нет ли законов режима, спрашивается у самого файла режима.
+      if (!modes.modeFile(dir, mode)) { problems.push(`${name} ${mode}: нет файла .claude/modes/${mode}.md — законы режима не дойдут`); continue }
       const args = modes.promptArgs(dir, mode, out, `${name}-${mode}`)
-      if (args[0] !== '--append-system-prompt-file') { problems.push(`${name} ${mode}: нет файла .claude/modes/${mode}.md — законы режима не дойдут`); continue }
       const text = readFileSync(args[1], 'utf8')
-      if (!text.startsWith(modes.sessionNote(mode))) problems.push(`${name} ${mode}: подсказка не начинается с фразы сессии`)
+      // 591: первой идёт душа узла (`lib/agent-kit/soul.md`), за ней фраза сессии.
+      const head = [modes.soulText(), modes.sessionNote(mode)].filter(Boolean).join('\n\n')
+      if (!text.startsWith(head)) problems.push(`${name} ${mode}: подсказка не начинается с души узла и фразы сессии`)
       if (!text.includes(own)) problems.push(`${name} ${mode}: в подсказке нет «${own}»`)
       if (text.includes(foreign)) problems.push(`${name} ${mode}: в подсказке чужой раздел «${foreign}»`)
     }
     rmSync(out, { recursive: true, force: true })
-  } else if (modes.promptArgs(dir, 'build', tmpdir(), 'unused')[0] !== '--append-system-prompt') {
-    problems.push(`${name}: без файлов режима мост обязан передавать фразу строкой, как до 552-5`)
+  } else if (!soulAhead(dir)) {
+    problems.push(`${name}: без файлов режима подсказка обязана нести душу узла (или фразу строкой, если души нет, как до 552-5)`)
   }
   const skills = join(dir, '.claude', 'skills')
   for (const g of dirs(skills).filter((d) => existsSync(join(skills, d, '.claude-plugin', 'plugin.json')))) {
