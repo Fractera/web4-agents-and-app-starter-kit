@@ -3693,3 +3693,27 @@ Owner's words verbatim — `/code/development-docs/development-steps/completed-s
   not sessions of the node — not covered.
 - Proof: a fresh clone of this repository from GitHub builds a session prompt that starts with the soul; a live Haiku session in reverse
   answered a newcomer in the Keeper's voice (3 requests, 124.6k new tokens).
+
+## Capability requests: an element asks for what it lacks; the node finds or builds it and says ready (step 589, 2026-10-24)
+
+Owner's words verbatim — `/code/development-docs/development-steps/completed-steps/589-main.md`; the core of them: «Получив на уровне узла
+такой запрос сразу определяешь … есть у него это или нет. Если нет то сообщить элементу который запросил … мы приступаем к её
+разработке»; «i need best solution - your choosse»; «go to finish».
+- **Not an MCP per element** (the cost of every session would grow with the node, 548-14): self-description is the A2A card, calls are
+  HTTP with no model (i2i). **The card names every door** — rule 5 of `check-a2a-card` in both templates (v0.3.142, v0.1.26).
+- **A need is data in the core**: the element runs `npm run need -- "<what>" [--use "<what for>"]` (skill `need-capability`), the door
+  `POST /api/node/needs` (node key, no model) writes `data/node/needs/<id>.json` (`lib/web4-items/needs.mjs`: requested → found · missing
+  → approved → building → ready → told; declined) and wakes the main agent.
+- **The main agent** (skill `handle-need`): `npm run needs`, `npm run find` (with `off=1`: turned-off elements come with the skills of
+  their card on disk, state off — still found, never missing; neighbours still do not get them, 567), `npm run card -- <id>` (skills and
+  doors from the card), `npm run state -- <id>` (prints «BEFORE YOU CLOSE» for a need the element builds). Found → the asker is told
+  which element, skill and door. Missing → «not built yet» to the asker and one question to the architect where they read it
+  (`npm run person`: Telegram chat_id). Yes → `supervise <owner> main --max 1` + `task` → the owner builds with `door:add`, card, commit,
+  `reply-core` → its «done» wakes the main agent → `needs verify` (the card must name the skill or door) → ready → the asker and the
+  architect are told. `needs answer/verify` undo the Git Bash rewrite of `/api/x` into a Windows path.
+- **The shared kit copy `architect/[item]` serves every registry element without its own kit group** (`isBornItem` of the kit master,
+  589-6): born elements and built-in ones drawn by the element tree — stripe had no agent at all since step 573.
+- Proven live 2026-10-24: «found» (stripe-payments) and «missing → yes → built → ready» (stripe built `GET /api/stripe-products`, told,
+  the architect got «Строительный процесс завершён…» in Telegram). 🛑 Open, the owner decides (shared kit): the boundary hook reads paths
+  inside a file's text (the builder waited 25 minutes); a question on the screen of an element without a bot reaches nobody; such a
+  session does not close itself after the core's answer; Telegram tools reach a session only with the result of its first tool call.
