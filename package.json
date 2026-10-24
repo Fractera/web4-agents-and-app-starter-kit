@@ -80,6 +80,7 @@
     "qa:agent": "node scripts/qa-agent-journal.mjs",
     "agent:screen": "node scripts/agent-screen.mjs",
     "check:modes": "node scripts/check-modes.mjs",
+    "check:boundary-hook": "node scripts/check-boundary-hook.mjs",
     "element:power": "node scripts/element-power.mjs",
     "element:web4": "node scripts/element-web4.mjs",
     "blocks:usage": "node scripts/blocks-usage.mjs"
