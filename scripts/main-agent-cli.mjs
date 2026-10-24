@@ -376,6 +376,12 @@ if (cmd === 'state') {
   // 548-20: результат проверки, которую ты поручил, — элемент сохраняет его `npm run reply-core` в своих данных.
   const report = readJson(join(ROOT, 'data', 'services', id, 'core-report.json'), null)
   console.log(`Report to you (npm run reply-core): ${report?.text ? `«${report.text}» (${report.at})` : 'none'}`)
+  // 589-4 (✗ живой круг 2026-10-24 20:20Z): строитель закончил запрос, главный агент по тексту надзора выключил его и закрылся — запрос
+  // остался «building», просивший и архитектор не узнали. Открытый запрос этого элемента в стадии building — первым делом.
+  const { listNeeds } = await import('../lib/web4-items/needs.mjs')
+  for (const n of listNeeds(ROOT, { open: true, limit: 20 }).filter((x) => x.owner === id && x.stage === 'building')) {
+    console.log(`BEFORE YOU CLOSE: this element builds ${n.id} for ${n.from} («${n.need.slice(0, 90)}») — skill handle-need, section 3: npm run needs -- verify ${n.id} --skill <skill> --door <path> (from the report), tell ${n.from} and the architect, then close.`)
+  }
   const woken = readJson(WOKEN, {})[id]
   console.log(`Turned on by you: ${woken ? `yes (${woken}) — turn it off when its job is done: npm run close -- ${id}` : 'no — leave it running'}`)
   console.log(`Last commits:\n${(git.stdout || '(none)').trim()}`)
