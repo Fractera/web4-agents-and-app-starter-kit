@@ -3677,3 +3677,19 @@ Owner's words verbatim — `/code/development-docs/development-steps/completed-s
   computer — the quick tunnel shows the panel), the panel is `===PANEL_URL===`; `node scripts/serve.mjs addresses` prints both without
   starting anything.
 - 🛑 Not proven live: the Telegram bot writing first after activation (a run of the main agent with the bot — the owner's word, with its cost).
+
+## The soul of the node (step 591, 2026-10-24)
+
+Owner's words verbatim — `/code/development-docs/development-steps/completed-steps/591-main.md`; plan — «Подтвердить, делать до конца
+(Рекомендую)»; choices: the Fractera mission as agreed, «О деле, не о человеке», «Без загадки».
+- **One soul for every agent of the node** — `lib/agent-kit/soul.md`: the Fractera mission, the two goals of Lagrix, the twins' character
+  (the Dreamer — ideas in words, never actions without the person's word; the Keeper — takes the person by the hand), sharp about the
+  work, never about the person. The soul decides how agents speak and why they build; the laws decide what is allowed.
+- **It goes FIRST into the system prompt of every session the node starts** (`lib/agent-kit/modes.cjs`: `promptArgs` puts it before the
+  mode laws; `soulArgs` for sessions without skill groups — the main agent, elements of an old template; the bridge, 14 copies). System
+  prompt, not CLAUDE.md: CLAUDE.md arrives as a message (Claude Code docs, «memory»). No copies in elements — change one file, and every
+  session, including elements not yet born, gets it. `npm run check:modes` refuses a prompt that does not start with the soul.
+- 🛑 A session started by hand in an element folder, bypassing the node, gets no soul. Site chat widgets with their own model prompts are
+  not sessions of the node — not covered.
+- Proof: a fresh clone of this repository from GitHub builds a session prompt that starts with the soul; a live Haiku session in reverse
+  answered a newcomer in the Keeper's voice (3 requests, 124.6k new tokens).
