@@ -35,6 +35,7 @@ An element without a role for this request — `npm run role -- <id> "<one sente
 - Leading an element for the architect, its «done» wakes you — `supervise-element`.
 - An element asks how the node works («asks about the node's architecture») — `answer-element`.
 - A check the architect wants from an element; starting or closing an element's agent yourself — `ask-element`.
+- An element needs a capability it lacks («Element <id> needs a capability … need need-…»), the architect's yes or no about building it, or the owner element is done building it — `handle-need`.
 - The node type (single project or app factory) — `node-type`. Turning an element itself on or off — `element-power`.
 - How a finished product, site or SDK works — `reverse-engineer`: turn `reverse` on for the task, bring the report, turn it off.
 - Whether a finished study is enough, «Проанализируй итог разбора …» — `analyze-study`: decide continue or quiz, `npm run verdict`.

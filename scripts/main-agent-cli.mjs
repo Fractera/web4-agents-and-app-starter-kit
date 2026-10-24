@@ -313,6 +313,7 @@ if (cmd === 'needs') {
   }
   if (sub === 'verify') {
     // «Готово» — только когда визитка владельца называет возможность: навык или дверь (589-4). Иначе — «не построено».
+    if (flag('--skill') || flag('--door')) N.setFields(ROOT, id, { skill: flag('--skill') ?? undefined, door: flag('--door') ?? undefined }, 'from the report of the owner')
     const r = N.readNeed(ROOT, id) ?? fail(`no need ${id}`)
     const dir = r.owner ? itemDir(r.owner) : null
     if (!dir) fail(`${id}: no owner element folder (owner: ${r.owner ?? 'none'})`)
@@ -325,7 +326,7 @@ if (cmd === 'needs') {
     console.log(`===NEED_VERIFIED=== ${r.owner}: ${skillOk ? `skill ${r.skill}` : ''}${skillOk && doorOk ? ' · ' : ''}${doorOk ? `door ${r.door}` : ''}`)
     process.exit(0)
   }
-  fail('needs [list] · show <id> · answer <id> … · verify <id>')
+  fail('needs [list] · show <id> · answer <id> … · verify <id> [--skill <id>] [--door <path>]')
 }
 
 if (cmd === 'state') {
