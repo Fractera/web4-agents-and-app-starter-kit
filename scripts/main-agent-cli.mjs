@@ -310,6 +310,13 @@ if (cmd === 'task') {
 if (cmd === 'needs') {
   const N = await import('../lib/web4-items/needs.mjs')
   const [sub, id] = rest
+  // 589-3 (✗ живой прогон 2026-10-24 19:13Z): Git Bash подменяет аргумент «/api/x» на «C:/Program Files/Git/api/x», когда зовёт программу
+  // Windows (подмена путей MSYS), — в запись легла чужая дверь. Путь двери всегда от корня сайта: приставку корня Git срезаем.
+  const door = (() => {
+    const v = flag('--door')
+    const m = typeof v === 'string' ? v.replace(/\\/g, '/').match(/^[A-Za-z]:\/(?:[^/]+\/)*?(?:Git|msys64|msys2)(\/.+)$/i) : null
+    return m ? m[1] : v
+  })()
   const line = (r) => `${r.id} · ${r.from} · ${r.stage}${r.owner ? ` · owner ${r.owner}` : ''}${r.skill ? ` · ${r.skill}` : ''} · «${r.need.slice(0, 90)}»`
   if (!sub || sub === 'list') {
     const open = N.listNeeds(ROOT, { open: true, limit: 5 })
@@ -327,14 +334,14 @@ if (cmd === 'needs') {
     const stage = ['found', 'missing', 'approved', 'building', 'ready', 'told', 'declined'].find((s) => has(`--${s}`)) ?? fail('answer <id> --found|--missing|--approved|--building|--ready|--told|--declined [--owner <id|new>] [--skill <id>] [--door <path>] [--note "…"]')
     const owner = stage === 'found' ? flag('--found') : flag('--owner')
     try {
-      const r = N.setStage(ROOT, id, stage, { owner: owner ?? undefined, skill: flag('--skill') ?? undefined, door: flag('--door') ?? undefined }, flag('--note') ?? '')
+      const r = N.setStage(ROOT, id, stage, { owner: owner ?? undefined, skill: flag('--skill') ?? undefined, door: door ?? undefined }, flag('--note') ?? '')
       console.log(`===NEED_OK=== ${line(r)}`)
     } catch (e) { fail(e.message) }
     process.exit(0)
   }
   if (sub === 'verify') {
     // «Готово» — только когда визитка владельца называет возможность: навык или дверь (589-4). Иначе — «не построено».
-    if (flag('--skill') || flag('--door')) N.setFields(ROOT, id, { skill: flag('--skill') ?? undefined, door: flag('--door') ?? undefined }, 'from the report of the owner')
+    if (flag('--skill') || door) N.setFields(ROOT, id, { skill: flag('--skill') ?? undefined, door: door ?? undefined }, 'from the report of the owner')
     const r = N.readNeed(ROOT, id) ?? fail(`no need ${id}`)
     const dir = r.owner ? itemDir(r.owner) : null
     if (!dir) fail(`${id}: no owner element folder (owner: ${r.owner ?? 'none'})`)

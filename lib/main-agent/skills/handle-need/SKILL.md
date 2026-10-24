@@ -19,13 +19,14 @@ A hint, not a law. Owner of the node, 2026-10-24: «Получив на уров
    <element> --skill <skill id> [--door <path>] --note "<why it fits>"`, then `npm run task -- <from> "Answer from the core to «<need>»:
    element <x> does it — <skill>, <door>. Agree an API once with skill use-i2i."` and `npm run needs -- answer <need> --told`.
    **Found in a TURNED OFF element** — it is still found, never «missing»: building it again would make a double. Add to the answer
-   «it is turned off now; the architect is asked to turn it on», and ask the architect once «Turn on <x> for <from>?» — on yes,
-   `npm run power -- <x> on` (skill element-power).
+   «it is turned off now; the architect is asked to turn it on», and ask the architect once (`npm run person`, as below) «Turn on <x>
+   for <from>?» — on yes, `npm run power -- <x> on` (skill element-power).
 3. Nobody does it → **missing**: pick the element whose role it belongs to (`--owner <element>`), or `new` when none fits;
    `npm run needs -- answer <need> --missing --owner <x> --note "<why there>"`. Then:
-   - ask the architect once (your Telegram bot if connected, otherwise in your answer here): «<from> needs «<need>» (<need id>). Nobody
-     in the node does it. Build it in <owner>? A small door costs roughly a few million tokens of the subscription, mostly cache.» —
-     yes / no;
+   - ask the architect once, where they read you: `npm run person` — your Telegram bot and their chat_id (an element woke you, so this
+     session has no chat of its own: send with the reply tool to that chat_id), otherwise the core's terminal. «<from> needs «<need>»
+     (<need id>). Nobody in the node does it. Build it in <owner>? A small door costs roughly a few million tokens of the subscription,
+     mostly cache.» — yes / no. A question only in your answer here, while they read Telegram, is never seen (✗ 2026-10-24);
    - tell the asking element: `npm run task -- <from> "Answer from the core to «<need>»: not built yet; the architect is asked to build it
      in <owner>; when it is ready the core wakes you — nothing to wait for now, finish as usual."`
 4. Before you close: `npm run needs` — a need still «requested» came while you worked: handle it the same way. Then
@@ -49,6 +50,7 @@ Their answer may come alone — in Telegram often a bare «да» or «нет» 
 2. `npm run needs -- verify <need> --skill <skill id> --door <path>` — records them from the report and reads the card of <x>:
    `===NEED_VERIFIED===` moves the need to `ready`; `===NEED_NOT_BUILT===` — tell the architect what the card lacks, never say «ready».
 3. Ready → `npm run task -- <from> "Answer from the core to «<need>»: ready — element <x>, <skill>, door <path>. Agree an API once with
-   skill use-i2i."` → `npm run needs -- answer <need> --told` → `npm run close -- <x>` (you turned it on) → `npm run done -- --close`.
+   skill use-i2i."` → `npm run needs -- answer <need> --told` → tell the architect in one line where they read you (`npm run person`):
+   «<need> built in <x>: <door>; <from> is told» → `npm run close -- <x>` (you turned it on) → `npm run done -- --close`.
 
 Each `task` starts the asking element's agent if it sleeps: one line, never a conversation.
