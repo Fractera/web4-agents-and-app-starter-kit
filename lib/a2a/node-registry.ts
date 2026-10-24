@@ -21,7 +21,8 @@ type Entry = {
   messengers?: { h2a: boolean; h2h: boolean; a2a: boolean }
 }
 // "role" — службы без визитки A2A (auth, data, config, design …): в поиске её представляет одна роль в узле (548-6).
-export type NodeEntry = Entry & { id: string; url: string | null; state: "fresh" | "drift" | "unpublished" | "no-card" | "role" }
+// "off" — выключенный элемент с визиткой на диске (589-3): только в поиске главного агента, `off` — причина по-английски.
+export type NodeEntry = Entry & { id: string; url: string | null; state: "fresh" | "drift" | "unpublished" | "no-card" | "role" | "off"; off?: string }
 
 type Props = { id?: string; summary?: string; a2a?: { card?: unknown } }
 
@@ -97,12 +98,28 @@ function nodeRoles(): Record<string, string> {
   return Object.fromEntries(Object.entries(all).filter(([k, v]) => !k.startsWith("_") && typeof v === "string" && v.trim()).map(([k, v]) => [k, String(v).trim()]))
 }
 
+// 589-3 (✗ живой прогон 2026-10-24 18:52Z): элемент reverse попросил «list the recorded Stripe payments», и главный агент ответил «нет,
+// строить в stripe» — у выключенного stripe поиск показал только роль, без навыков, хотя его визитка называет stripe-payments и дверь.
+// Закон 567 («архитектура должна понимать что они есть но они выключены»): соседям выключенный элемент не предлагается, а главному
+// агенту он нужен со своими навыками — иначе «нет» ложное, и узел строит дубль. Поэтому `withOff` — только для главного агента.
+/** Визитки выключенных элементов с диска (состояние "off" и причина). */
+function offEntries(): NodeEntry[] {
+  const out: NodeEntry[] = []
+  for (const s of listServices() as unknown as { id: string; kind?: string }[]) {
+    const off = power.offOf(s)
+    if (!off) continue
+    const entry = entryForRegistry(s.id, s.kind === "user" ? "user" : "core")
+    if (entry) out.push({ ...entry, id: s.id, url: serviceUrl(s.id), state: "off", off: power.reasonIn(off, "en") })
+  }
+  return out
+}
+
 /** Найти: до `limit` записей, где совпали значимые слова запроса (теги навыков и роль в узле весят больше слов описания). */
-export function findEntries(query: string, limit = 10): (NodeEntry & { score: number })[] {
+export function findEntries(query: string, limit = 10, { withOff = false }: { withOff?: boolean } = {}): (NodeEntry & { score: number })[] {
   const words = [...new Set(wordsOf(query))]
   if (!words.length) return []
   const roles = nodeRoles()
-  const carded = nodeEntries()
+  const carded = withOff ? [...nodeEntries(), ...offEntries()] : nodeEntries()
   const seen = new Set(carded.map((e) => e.id))
   const roleOnly: NodeEntry[] = (listServices() as unknown as { id: string }[])
     .filter((s) => !seen.has(s.id) && roles[s.id])

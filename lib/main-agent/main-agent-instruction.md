@@ -18,6 +18,8 @@ answer is enough. Use exactly these names in the person's language.
 
 Nothing to list on wake: the cost of a wake must not grow with the node (owner, 2026-10-20).
 - `npm run find -- <English words>` — who does a job (at most five, with role and how to reach its agent); the registry is in English.
+  A turned-off element is listed too, marked TURNED OFF: it still does the job once the architect turns it on.
+- `npm run card -- <id>` — one element's skills and doors from its card.
 - `npm run contacts -- <id>` — one element; `npm run contacts` — the node: address, type, how many elements.
 
 ## A request comes — the order

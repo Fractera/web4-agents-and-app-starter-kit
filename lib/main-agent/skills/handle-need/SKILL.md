@@ -14,16 +14,19 @@ A hint, not a law. Owner of the node, 2026-10-24: «Получив на уров
 ## 1. A new request — found or missing
 
 1. `npm run needs -- show <need>` — who asks, what, what for.
-2. `npm run find -- <a few English words of the need>` → read the card of each candidate (`npm run a2a -- card <address>` if `find` is
-   not enough). A skill or door that does the job → **found**: `npm run needs -- answer <need> --found <element> --skill <skill id>
-   [--door <path>] --note "<why it fits>"`, then `npm run task -- <from> "Answer from the core to «<need>»: element <x> does it —
-   <skill>, <door>. Agree an API once with skill use-i2i."` and `npm run needs -- answer <need> --told`.
+2. `npm run find -- <a few English words of the need>` → `npm run card -- <element>` for each candidate: its skills and doors, read from
+   its folder — a turned-off element has them too. A skill or door that does the job → **found**: `npm run needs -- answer <need> --found
+   <element> --skill <skill id> [--door <path>] --note "<why it fits>"`, then `npm run task -- <from> "Answer from the core to «<need>»:
+   element <x> does it — <skill>, <door>. Agree an API once with skill use-i2i."` and `npm run needs -- answer <need> --told`.
+   **Found in a TURNED OFF element** — it is still found, never «missing»: building it again would make a double. Add to the answer
+   «it is turned off now; the architect is asked to turn it on», and ask the architect once «Turn on <x> for <from>?» — on yes,
+   `npm run power -- <x> on` (skill element-power).
 3. Nobody does it → **missing**: pick the element whose role it belongs to (`--owner <element>`), or `new` when none fits;
    `npm run needs -- answer <need> --missing --owner <x> --note "<why there>"`. Then:
    - ask the architect once (your Telegram bot if connected, otherwise in your answer here): «<from> needs «<need>». Nobody in the node
      does it. Build it in <owner>? A small door costs roughly a few million tokens of the subscription, mostly cache.» — yes / no;
    - tell the asking element: `npm run task -- <from> "Answer from the core to «<need>»: not built yet; the architect is asked to build it
-     in <owner>; you will be told when it is ready."`
+     in <owner>; when it is ready the core wakes you — nothing to wait for now, finish as usual."`
 4. `npm run done -- --close`.
 
 ## 2. The architect's answer

@@ -38,7 +38,8 @@ export async function GET(req: NextRequest) {
     return e ? NextResponse.json({ ok: true, entry: withTelegram(e) }, { headers }) : NextResponse.json({ ok: false, error: "not-found" }, { status: 404, headers })
   }
   if (q) {
-    const found = findEntries(q, limit)
+    // 589-3: `off=1` — и выключенные элементы с навыками из визитки на диске (state "off"); так ищет только главный агент узла.
+    const found = findEntries(q, limit, { withOff: req.nextUrl.searchParams.get("off") === "1" })
     // Не нашлось в узле ≠ не существует. 548-9 (владелец 2026-10-19): дальше — f2f, поиск целого элемента в сети Lagrix (пока
     // имитация), затем продуктовый квиз; у нативного элемента f2f нет — сразу квиз или новый элемент через главного агента.
     // 548-6 (2026-10-20): реестр написан по-английски — запрос без латиницы не находит ничего, даже когда элемент есть («вход на

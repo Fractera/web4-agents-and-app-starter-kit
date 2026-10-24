@@ -9,7 +9,9 @@
 //
 //   contacts [<id>]          — узел постоянного размера: службы, с которыми он родился, и число рождённых элементов; с <id> —
 //                              один элемент: адрес · род · состояние · роль · как до него достучаться
-//   find <слова>             — кто в узле умеет это (поиск реестра ядра `GET /api/node/a2a?q=`)
+//   find <слова>             — кто в узле умеет это (поиск реестра ядра `GET /api/node/a2a?q=…&off=1`, выключенные — с пометкой)
+//   card <id>                — визитка элемента с диска: навыки и двери (589-3)
+//   needs [list|show|answer|verify] — запросы возможности элементов (589, навык handle-need)
 //   lagrix <слова>           — f2f: поиск целого элемента в сети Lagrix; сети ещё нет — ИМИТАЦИЯ (запрос по документам 17 и 20)
 //   create --role "<фраза>" (--brief "<текст>" | --brief-file <путь>) [--native] [--supervise main|architect] [--no-wake]
 //                            — новый элемент: черновик → рождение из шаблона → роль → задание в его приёмную → пробуждение агента
@@ -165,7 +167,8 @@ if (cmd === 'look') {
 if (cmd === 'find') {
   const words = rest.join(' ').trim()
   if (!words) fail('find <plain words of the job>')
-  const r = await core(`/api/node/a2a?q=${encodeURIComponent(words)}`).catch((e) => fail(`the core did not answer: ${e.message}`))
+  // 589-3: `off=1` — и выключенные элементы с навыками из визитки (✗ 2026-10-24: stripe «skills: —», и «нет» вышло ложным).
+  const r = await core(`/api/node/a2a?q=${encodeURIComponent(words)}&off=1`).catch((e) => fail(`the core did not answer: ${e.message}`))
   const entries = r.body?.entries ?? []
   // 548-6 (2026-10-20): реестр написан по-английски — «вход на сайт» не нашёл auth. Без латиницы — повтор английскими словами, не сеть.
   if (!entries.length && !/[a-z]/i.test(words)) { console.log(`Nothing found for «${words}»: the node's registry is written in English — run npm run find again with English words (for example: sign in, remove background).`); process.exit(0) }
@@ -173,8 +176,26 @@ if (cmd === 'find') {
   const role = roles()
   for (const e of entries.slice(0, 5)) {
     const id = registry().find((s) => s.id === e.address || addressOf(s.id) === e.address)?.id ?? e.address
-    console.log(`- ${e.address} — ${role[id] ?? firstSentence(e.description)} · skills: ${(e.skills ?? []).map((s) => s.id).join(', ') || '—'} — ${reachOf(id)}`)
+    const off = e.state === 'off' ? ` · TURNED OFF (${e.off || 'no reason'}) — only the architect turns it on` : ''
+    console.log(`- ${e.address} — ${role[id] ?? firstSentence(e.description)} · skills: ${(e.skills ?? []).map((s) => s.id).join(', ') || '—'}${off} — ${reachOf(id)}`)
   }
+  console.log('Doors and what each skill does: npm run card -- <element>')
+  process.exit(0)
+}
+
+// 589-3: визитка одного элемента с диска — навыки и двери, и у выключенного тоже (его сайт молчит, визитка в папке есть).
+if (cmd === 'card') {
+  const [id] = rest
+  if (!id) fail('card <element>')
+  const e = registry().find((s) => s.id === id || addressOf(s.id) === id) ?? fail(`no element ${id} in the registry`)
+  const dir = itemDir(e.id) ?? fail(`${id}: no folder`)
+  const card = readJson(join(dir, 'OWN-SERVICE-PROPS', 'A2A-CARD.json'), null)
+  const off = e.off && typeof e.off === 'object' ? (typeof e.off.reason === 'string' ? e.off.reason : e.off.reason?.en ?? 'no reason') : null
+  console.log(`${addressOf(e.id)} · ${off ? `TURNED OFF (${off}) — only the architect turns it on` : 'on'}`)
+  if (!card) { console.log('no A2A card: ask its role (npm run contacts -- ' + e.id + ')'); process.exit(0) }
+  const ext = (card.capabilities?.extensions ?? []).find((x) => String(x?.uri).includes('/a2a/ext/node/'))?.params ?? {}
+  for (const s of card.skills ?? []) console.log(`skill ${s.id} — ${firstSentence(s.description, 220)}`)
+  for (const d of ext.doors ?? []) console.log(`door ${d.method ?? 'GET'} ${d.path}${d.skill ? ` → ${d.skill}` : ''}`)
   process.exit(0)
 }
 
