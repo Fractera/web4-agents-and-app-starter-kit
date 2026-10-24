@@ -81,7 +81,8 @@
     "agent:screen": "node scripts/agent-screen.mjs",
     "check:modes": "node scripts/check-modes.mjs",
     "element:power": "node scripts/element-power.mjs",
-    "element:web4": "node scripts/element-web4.mjs"
+    "element:web4": "node scripts/element-web4.mjs",
+    "blocks:usage": "node scripts/blocks-usage.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.55",
