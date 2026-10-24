@@ -5,6 +5,7 @@
   "scripts": {
     "contacts": "node ../../scripts/main-agent-cli.mjs contacts",
     "find": "node ../../scripts/main-agent-cli.mjs find",
+    "needs": "node ../../scripts/main-agent-cli.mjs needs",
     "lagrix": "node ../../scripts/main-agent-cli.mjs lagrix",
     "create": "node ../../scripts/main-agent-cli.mjs create",
     "task": "node ../../scripts/main-agent-cli.mjs task",

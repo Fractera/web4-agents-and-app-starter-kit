@@ -284,6 +284,50 @@ if (cmd === 'task') {
   process.exit(b.ok ? 0 : 1)
 }
 
+// 589-2: запросы возможности (`lib/web4-items/needs.mjs`, навык handle-need). Список — не больше пяти открытых: стоимость пробуждения
+// не растёт с узлом (548-14). Слова запроса — данные в «».
+if (cmd === 'needs') {
+  const N = await import('../lib/web4-items/needs.mjs')
+  const [sub, id] = rest
+  const line = (r) => `${r.id} · ${r.from} · ${r.stage}${r.owner ? ` · owner ${r.owner}` : ''}${r.skill ? ` · ${r.skill}` : ''} · «${r.need.slice(0, 90)}»`
+  if (!sub || sub === 'list') {
+    const open = N.listNeeds(ROOT, { open: true, limit: 5 })
+    console.log(open.length ? open.map(line).join('\n') : 'no open needs')
+    process.exit(0)
+  }
+  if (sub === 'show') {
+    const r = N.readNeed(ROOT, id) ?? fail(`no need ${id}`)
+    console.log(line(r))
+    if (r.use) console.log(`what for: «${r.use}»`)
+    console.log(r.history.map((h) => `  ${h.at.slice(0, 16)} ${h.stage}${h.note ? ` — ${h.note}` : ''}`).join('\n'))
+    process.exit(0)
+  }
+  if (sub === 'answer') {
+    const stage = ['found', 'missing', 'approved', 'building', 'ready', 'told', 'declined'].find((s) => has(`--${s}`)) ?? fail('answer <id> --found|--missing|--approved|--building|--ready|--told|--declined [--owner <id|new>] [--skill <id>] [--door <path>] [--note "…"]')
+    const owner = stage === 'found' ? flag('--found') : flag('--owner')
+    try {
+      const r = N.setStage(ROOT, id, stage, { owner: owner ?? undefined, skill: flag('--skill') ?? undefined, door: flag('--door') ?? undefined }, flag('--note') ?? '')
+      console.log(`===NEED_OK=== ${line(r)}`)
+    } catch (e) { fail(e.message) }
+    process.exit(0)
+  }
+  if (sub === 'verify') {
+    // «Готово» — только когда визитка владельца называет возможность: навык или дверь (589-4). Иначе — «не построено».
+    const r = N.readNeed(ROOT, id) ?? fail(`no need ${id}`)
+    const dir = r.owner ? itemDir(r.owner) : null
+    if (!dir) fail(`${id}: no owner element folder (owner: ${r.owner ?? 'none'})`)
+    const card = readJson(join(dir, 'OWN-SERVICE-PROPS', 'A2A-CARD.json'), {})
+    const ext = (card.capabilities?.extensions ?? []).find((e) => String(e?.uri).includes('/a2a/ext/node/'))?.params ?? {}
+    const skillOk = r.skill && (card.skills ?? []).some((s) => s?.id === r.skill)
+    const doorOk = r.door && (ext.doors ?? []).some((d) => d?.path === r.door)
+    if (!skillOk && !doorOk) { console.log(`===NEED_NOT_BUILT=== ${r.owner}'s card names neither skill «${r.skill ?? '—'}» nor door «${r.door ?? '—'}»`); process.exit(1) }
+    if (r.stage === 'building') N.setStage(ROOT, id, 'ready', {}, `the card of ${r.owner} names ${skillOk ? `skill ${r.skill}` : `door ${r.door}`}`)
+    console.log(`===NEED_VERIFIED=== ${r.owner}: ${skillOk ? `skill ${r.skill}` : ''}${skillOk && doorOk ? ' · ' : ''}${doorOk ? `door ${r.door}` : ''}`)
+    process.exit(0)
+  }
+  fail('needs [list] · show <id> · answer <id> … · verify <id>')
+}
+
 if (cmd === 'state') {
   const [id] = rest
   if (!id) fail('state <id>')
