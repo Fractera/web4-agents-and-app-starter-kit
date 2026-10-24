@@ -23,13 +23,18 @@ A hint, not a law. Owner of the node, 2026-10-24: «Получив на уров
    `npm run power -- <x> on` (skill element-power).
 3. Nobody does it → **missing**: pick the element whose role it belongs to (`--owner <element>`), or `new` when none fits;
    `npm run needs -- answer <need> --missing --owner <x> --note "<why there>"`. Then:
-   - ask the architect once (your Telegram bot if connected, otherwise in your answer here): «<from> needs «<need>». Nobody in the node
-     does it. Build it in <owner>? A small door costs roughly a few million tokens of the subscription, mostly cache.» — yes / no;
+   - ask the architect once (your Telegram bot if connected, otherwise in your answer here): «<from> needs «<need>» (<need id>). Nobody
+     in the node does it. Build it in <owner>? A small door costs roughly a few million tokens of the subscription, mostly cache.» —
+     yes / no;
    - tell the asking element: `npm run task -- <from> "Answer from the core to «<need>»: not built yet; the architect is asked to build it
      in <owner>; when it is ready the core wakes you — nothing to wait for now, finish as usual."`
-4. `npm run done -- --close`.
+4. Before you close: `npm run needs` — a need still «requested» came while you worked: handle it the same way. Then
+   `npm run done -- --close`.
 
 ## 2. The architect's answer
+
+Their answer may come alone — in Telegram often a bare «да» or «нет» that wakes a fresh session, which never saw your question:
+`npm run needs` → the newest need in stage «missing» is the one you asked about; several of them — ask which, naming each by its words.
 
 - **No** → `npm run needs -- answer <need> --declined --note "<their words>"`, tell the asking element in one line, done.
 - **Yes** (maybe naming another owner) → `npm run needs -- answer <need> --approved --owner <x>`, then lead the build:
