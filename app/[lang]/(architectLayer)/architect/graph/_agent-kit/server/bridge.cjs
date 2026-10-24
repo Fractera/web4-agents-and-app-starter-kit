@@ -11,7 +11,7 @@
 // печатается в журнал и в сам терминал: молча пропавший терминал читается как «сломали вход в подписку».
 // Измерено 2026-09-22: у `node-pty@1.1.0` готовые сборки есть под Windows и macOS, под Linux — нет.
 
-const { existsSync, readFileSync, unlinkSync } = require('node:fs')
+const { existsSync, readFileSync, unlinkSync, writeFileSync } = require('node:fs')
 const path = require('node:path')
 const { redeemTicket } = require('./ticket.cjs')
 const session = require('./session.cjs')
@@ -462,7 +462,31 @@ async function done(service, { close = false, reviewed = false } = {}) {
   try {
     if (require(path.join(process.cwd(), 'lib', 'web4-items', 'supervision.cjs')).byMain(service)) return { ok: true, asked: false, ledByMain: true }
   } catch { /* нет записи надзора — спросить, как прежде */ }
+  // 592-3 (план шага 592, согласованный владельцем 2026-10-24): сессию, которую включил главный агент (`npm run task` → запись в
+  // `data/node/woken-by-main.json`), у элемента без бота закрывает её же «закончил»: спросить «выключить?» некого, а живая сессия
+  // держит ~300 МБ памяти человека. ✗ 589: reverse после ответа ядра остался включённым. Терминал открыт — кто-то смотрит, сессия
+  // остаётся; у элемента с ботом и у включённой человеком — прежний вопрос.
+  const id = modes.baseOf(service)
+  if (!telegram.connected(id) && live.clients.size === 0 && wokenByMain(id)) {
+    forgetWokenByMain(id)
+    const t = setTimeout(() => { if (session.current(service) === live) session.stop(service, 'closed-woken-by-main') }, 1500)
+    t.unref?.()
+    return { ok: true, closing: true, wokenByMain: true }
+  }
   return telegram.askToClose(service, 'done', { reviewed: Boolean(live.reviewed) })
+}
+
+/** 592-3: агентов, которых включил главный агент, записывает его команда `task` (`scripts/main-agent-cli.mjs`, `markWoken`). */
+const wokenFile = () => path.join(process.cwd(), 'data', 'node', 'woken-by-main.json')
+function wokenByMain(id) {
+  try { return Object.prototype.hasOwnProperty.call(JSON.parse(readFileSync(wokenFile(), 'utf8')), id) } catch { return false }
+}
+function forgetWokenByMain(id) {
+  try {
+    const j = JSON.parse(readFileSync(wokenFile(), 'utf8'))
+    delete j[id]
+    writeFileSync(wokenFile(), JSON.stringify(j, null, 2) + '\n', 'utf8')
+  } catch { /* записи нет — стирать нечего */ }
 }
 
 // 409-3: кнопка «Запустить» в Telegram рождает сессию этим же путём, уже с подтверждением.

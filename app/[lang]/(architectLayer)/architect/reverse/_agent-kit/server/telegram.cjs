@@ -715,17 +715,26 @@ function channelState(service) {
 
 /**
  * 547, запасной путь: терминал агента стоит на вопросе, на который узел ответить не вправе (агента включили не из чата) — бот
- * зовёт человека туда, где вопрос виден. Один раз на сессию; бота нет — молчит.
+ * зовёт человека туда, где вопрос виден. Один раз на вопрос.
+ * 592-4 (план шага 592, согласованный владельцем 2026-10-24, — новое поведение «система пишет вам сама»): у элемента без своего
+ * бота то же сообщение уходит допущенным бота главного агента — архитектору, на языке его человека, со ссылкой на терминал
+ * элемента. ✗ 589-4: строитель stripe без бота 25 минут стоял на вопросе, о котором не знал никто. Бота нет и у главного агента —
+ * молчит, как прежде. Ключ сессии рабочего процесса (`<id>--work`) — не элемент: у него нет своей страницы терминала, молчит.
  */
+const MAIN_AGENT = 'build'
 async function tellWaiting(service) {
-  const token = storedToken(service)
-  if (!token) return
-  const t = await askTable(service)
+  const via = storedToken(service) ? service : service !== MAIN_AGENT && isService(service) && connected(MAIN_AGENT) ? MAIN_AGENT : null
+  if (!via) return { sent: 0 }
+  const token = storedToken(via)
+  const t = await askTable(via)
   const a = shortName(named(service))
-  const link = `${coreOrigin()}/${personLang(service)}${sectionPaths(service).terminal}`
-  for (const chat of access(service).allowed) {
-    await tg(token, 'sendMessage', { chat_id: chat, text: (t.waitingTerminal ?? ASK.en.waitingTerminal)(a, link), disable_web_page_preview: true })
+  const link = `${coreOrigin()}/${personLang(via)}${sectionPaths(service).terminal}`
+  let sent = 0
+  for (const chat of access(via).allowed) {
+    const r = await tg(token, 'sendMessage', { chat_id: chat, text: (t.waitingTerminal ?? ASK.en.waitingTerminal)(a, link), disable_web_page_preview: true })
+    if (r?.ok) sent++
   }
+  return { sent, via }
 }
 
 module.exports = {
