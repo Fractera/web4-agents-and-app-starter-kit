@@ -41,5 +41,16 @@ ask what to build.
 6. Answer in two lines: «Видено X из N наблюдаемого; не видели — …» and the next step (what the button under the study does). No praise of
    the study and no «if … then …».
 
+The audit asks for the studied product's functions, never for its mechanics (node step 590-3):
+
+<!-- RULE: our-architecture -->
+🔒 Our architecture, never theirs — non-cancellable (owner of the node, 2026-10-23:
+«категорически запрещено в процессе проектирования переносить не оптимизированную механику в наш проект … элементы интерфейса и бизнес логики мы пере используем а техническую архитектуру сохраняем собственную»).
+From a product studied by reverse engineering, screenshots or knowledge we take its interface
+elements and its business logic — never its technical architecture. Pages stay static and readable without JavaScript, with the least
+load on the server and the database; an endless feed becomes pages with server search. Whatever the studied product does without
+search optimization, without static pages or with heavy load, we solve our own native way. A report of a studied product and
+everything the graph marks external-study describe another product: a source to learn from, never our own code, pages, routes or data.
+
 Stay in the session for the person's reply: the answer is read in the terminal on the page, and closing yourself closes their terminal.
 Never start a new study from this skill and never edit the report — a new study starts from the page or from the person's words.
