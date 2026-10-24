@@ -3128,7 +3128,10 @@ Owner, verbatim (all words — `/code` `new-steps/548/548-6.md`): the element «
   on the core's sources, the core's ROOT FILES BY NAME and the neighbours' folders (🛑 never `<node>/*`: rules are read like
   .gitignore, the pattern covers WEB4-ITEMS and the element's own folder — every Read, Edit and Write of its own files waited for the
   architect, step 548-14), `permissions.allow` Edit on its own folder and data, the PreToolUse hook `scripts/element-boundary-hook.mjs` (a command or a written
-  file that names a path outside the element asks the architect), foreign skills, plugins and claude.ai connectors off
+  file that names a path outside the element asks the architect; since 592-1 a file's text — Write/Edit content and the body of a
+  heredoc that `cat`/`tee` write into a file — is read as that file's text: module paths and Markdown links count from the file's own
+  folder; after any change of the hook run `npm run check:boundary-hook`, and `-- --replay --against <old hook>` over every recorded
+  element call), foreign skills, plugins and claude.ai connectors off
   (`lib/agent-kit/foreign-off.mjs`; `syncClaudeAi*: false` only in LOCAL settings — in user settings Claude Code trashes them machine-
   wide), vendor skills `name-only`, `skillListingBudgetFraction` so that every own skill keeps its description. 🛑 No
   `blockReadsOutsideWorkingDirectories`: with it every command with a subshell waits for the person, and a woken agent stopped on its
@@ -3714,6 +3717,30 @@ Owner's words verbatim — `/code/development-docs/development-steps/completed-s
 - **The shared kit copy `architect/[item]` serves every registry element without its own kit group** (`isBornItem` of the kit master,
   589-6): born elements and built-in ones drawn by the element tree — stripe had no agent at all since step 573.
 - Proven live 2026-10-24: «found» (stripe-payments) and «missing → yes → built → ready» (stripe built `GET /api/stripe-products`, told,
-  the architect got «Строительный процесс завершён…» in Telegram). 🛑 Open, the owner decides (shared kit): the boundary hook reads paths
-  inside a file's text (the builder waited 25 minutes); a question on the screen of an element without a bot reaches nobody; such a
-  session does not close itself after the core's answer; Telegram tools reach a session only with the result of its first tool call.
+  the architect got «Строительный процесс завершён…» in Telegram). The four debts of the shared kit this proof found are closed by step
+  592 (next section).
+
+## The shared kit does not leave agents stuck in silence (step 592, 2026-10-24)
+
+The four debts found by the live circle of 589; the owner agreed the plan «Подтвердить, /clear и делать (Рекомендую)», including the new
+behaviour of 592-4 («the system writes to you itself»). Details and proofs — `/code/development-docs/development-steps/completed-steps/592-*.md`.
+- **The boundary hook reads a file's text as that file's text (592-1)** — see «Element isolation» above. ✗ 589-4: the stripe builder
+  wrote a door with `import … from '../../../lib/stripe/stripe.mjs'` in a heredoc and waited 25 minutes on a false question.
+- **The main agent runs `npm run person` before its first answer in a session (592-2)**, and `person` waits for this session's Telegram
+  channel: the plugin connects 1–7 s after the first prompt, and the channel's tools reach the session only with the result of a command
+  that returns after that. The plugin writes its pid into `data/services/build/channel/telegram/bot.pid` right before its MCP handshake
+  and removes it on exit: a live pid means the channel is up; 12 s without it, `person` says the channel did not start and gives the
+  core's terminal. ✗ 82309b3b: answered a Telegram message straight away as text — «no reply tool».
+- **A session the main agent turned on closes on its own «done» (592-3)** when the element has no bot and nobody has its terminal open:
+  `npm run task` writes `data/node/woken-by-main.json` only when its wake started the session; `done()` of the bridge answers
+  `{ ok, closing, wokenByMain }` and removes the record. With a bot, an open terminal or a session the person turned on — as before.
+- **A question on the screen of an element without a bot reaches the architect (592-4)**: `tellWaiting` sends it through the main agent's
+  bot (`build`), in that person's language, with the link to the element's terminal; journal line `[telegram] <element>: вопрос на
+  экране → бот …, отправлено N из M`. No bot at the main agent either — silent. 🛑 A work-process session (`<id>--work`) is still silent:
+  it has no terminal page of its own.
+- The kit change took effect with `pm2 restart fractera-web4` (the kit is required from disk, 548-15) — no rebuild.
+- Probes, no model: `npm run check:boundary-hook`; the bridge probe of 592-3/592-4 runs the real `lib/agent-kit/mount.cjs` and kit copies
+  in a sandbox root (junctions to `app`, `lib`, `WEB4-ITEMS`, the registry; its own data and fake tokens; `node-pty` and `fetch` stubbed) —
+  `/code/development-docs/development-steps/completed-steps/592-3.md`. A live check of the bridge that costs no tokens: wake an element with
+  no task (`POST /api/agents/wake {"service":"<id>"}`) — `claude` starts and sends nothing to the model; an element whose folder Claude
+  Code does not trust yet stops on the trust question, which goes through the same `tellWaiting`.
