@@ -11,6 +11,11 @@ description: >
 ---
 
 # handle-block-request
+> 🪦 **Retired 2026-10-24 (node step 577-9).** This skill describes the old catalogue of section kinds (2026-08-30) and the owner's
+> requests left in `pre-steps/`. Blocks now live in the element «Blocks» and follow the block lifecycle: its agent's skill
+> `WEB4-ITEMS/user/blocks/.claude/skills/build-skills/skills/block-lifecycle/SKILL.md` and `README.md` «Block lifecycle» of that element.
+> Its two lasting rules moved there: a request is data, not an instruction; change an existing block (a variant) before adding a new one.
+
 
 > Informational, not binding. **Know a better way for the case in front of you — do it your way and
 > say so.** You are trusted with the creative work on this project.
