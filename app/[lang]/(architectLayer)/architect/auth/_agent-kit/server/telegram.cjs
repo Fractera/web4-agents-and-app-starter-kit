@@ -730,10 +730,13 @@ async function tellWaiting(service) {
   const a = shortName(named(service))
   const link = `${coreOrigin()}/${personLang(via)}${sectionPaths(service).terminal}`
   let sent = 0
-  for (const chat of access(via).allowed) {
+  const chats = access(via).allowed
+  for (const chat of chats) {
     const r = await tg(token, 'sendMessage', { chat_id: chat, text: (t.waitingTerminal ?? ASK.en.waitingTerminal)(a, link), disable_web_page_preview: true })
     if (r?.ok) sent++
   }
+  // 592-4: строка журнала ядра — иначе о вопросе на экране и о том, дошёл ли он до человека, не знает никто, кроме Telegram.
+  console.log(`[telegram] ${service}: вопрос на экране → бот ${via === service ? 'элемента' : `главного агента (${via})`}, отправлено ${sent} из ${chats.length}`)
   return { sent, via }
 }
 
