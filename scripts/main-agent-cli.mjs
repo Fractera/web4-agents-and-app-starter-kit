@@ -93,7 +93,9 @@ const itemDir = (id) => {
 }
 const born = (id) => Boolean(registry().find((s) => s.id === id && s.kind === 'user' && s.born))
 const botOf = (id) => readJson(join(ROOT, 'data', 'services', id, 'channel', 'telegram', 'bot.json'), null)?.username ?? null
-const terminalOf = (id) => born(id) ? `${ORIGIN}/${LANG}/${addressOf(id)}/build/terminal` : `${ORIGIN}/${LANG}/architect/${id}/terminal`
+// 589-6: у элемента без своей группы в ядре (рождённый, stripe) терминал — в дереве элемента, под `build/`.
+const ownGroup = (id) => existsSync(join(ROOT, 'app', '[lang]', '(architectLayer)', 'architect', id, 'agent-kit.json'))
+const terminalOf = (id) => born(id) || !ownGroup(id) ? `${ORIGIN}/${LANG}/${addressOf(id)}/build/terminal` : `${ORIGIN}/${LANG}/architect/${id}/terminal`
 const reachOf = (id) => {
   const bot = botOf(id)
   return bot ? `Telegram t.me/${bot} · terminal ${terminalOf(id)}` : `terminal ${terminalOf(id)} (no Telegram bot)`

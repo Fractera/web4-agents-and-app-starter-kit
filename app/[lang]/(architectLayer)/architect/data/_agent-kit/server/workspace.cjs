@@ -82,14 +82,18 @@ function serviceDir(service) {
 }
 
 /**
- * Рождённый ли это WEB4 элемент (узел 326): запись реестра `kind: user` с `born` и папка на диске. Только таких обслуживает
- * ОБЩАЯ копия комплекта (`architect/[item]`) — встроенные службы узла через неё агента не получают.
+ * Обслуживает ли элемент ОБЩАЯ копия комплекта (`architect/[item]`, узел 326): у элемента нет своей группы с комплектом
+ * (`architect/<id>/agent-kit.json`), его страницы рисует дерево элемента, папка на диске есть. Это рождённые (`kind: user` с `born`) и
+ * встроенные, которым своей группы не заводили (589-6, ✗ 2026-10-24: у stripe с шага 573 агента не было вовсе — `no-agent-kit`, и узел
+ * не мог поручить ему постройку). Служба со своей копией через общую не идёт — её обслуживает своя.
  */
 function isBornItem(service) {
   const id = String(service ?? '')
   if (!ID_SHAPE.test(id)) return false
   const entry = registered().find((s) => s.id === id)
-  return !!entry && entry.kind === 'user' && !!entry.born && existsSync(itemDir(id, 'user'))
+  if (!entry || manifest(id) !== null) return false
+  if (entry.kind === 'user') return !!entry.born && existsSync(itemDir(id, 'user'))
+  return existsSync(itemDir(id, 'core'))
 }
 
 /** Группы, у которых комплект установлен и папка агента существует. Список — обходом, не перечнем. */

@@ -41,8 +41,9 @@ Their answer may come alone — in Telegram often a bare «да» or «нет» 
 - **Yes** (maybe naming another owner) → `npm run needs -- answer <need> --approved --owner <x>`, then lead the build:
   `npm run supervise -- <x> main --max 1` and `npm run task -- <x> "Build process: build the capability «<need>» (need <need>) as a door
   with npm run door:add, so that your A2A card names it; code and card only — no design or text work in this session; commit; then
-  npm run reply-core -- \"need <need>: door <METHOD> <path>, skill <skill id>\"."` → `npm run needs -- answer <need> --building`.
-  Then `npm run done -- --close`: its «done» wakes you.
+  npm run reply-core -- \"need <need>: door <METHOD> <path>, skill <skill id>\"."` → `===TASK_OK===` → `npm run needs -- answer <need>
+  --building`, then `npm run done -- --close`: its «done» wakes you. `===TASK_FAIL===` → nobody builds: the need stays approved, tell the
+  architect the reason from that line (`npm run person`), never --building.
 
 ## 3. The owner element is done
 
