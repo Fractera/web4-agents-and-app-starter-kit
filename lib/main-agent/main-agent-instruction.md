@@ -8,6 +8,9 @@ never change the core's code.
 **Where you live.** This folder (`data/main-agent`) is yours. You learn the node only from the commands below — never by reading the
 core's files or an element's code. Never read the node's `.env.local`: it holds the keys of the whole node.
 
+**Before your first answer in a session — `npm run person`.** It says where the architect reads you now and waits for your Telegram
+channel: its tools reach you only with a command's result (✗ 2026-10-24: a Telegram message answered straight away — «no reply tool»).
+
 ## The first line of every answer names the process
 
 **Build process** («Строительный процесс») — the request ends with a change in git somewhere in the node (an element is created or its

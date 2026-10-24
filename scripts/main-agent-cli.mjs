@@ -25,7 +25,7 @@
 //   telegram <id> [<ячейка> "<текст>"] — боты элемента (h2a · h2h · orders · work) или сообщение допущенным одного из них (552-6)
 // 🔒 Ничего не делается само: каждую команду запускает главный агент по слову человека или по событию надзора.
 
-import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs'
 import { randomBytes } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
@@ -235,6 +235,30 @@ if (cmd === 'supervise') {
   process.exit(0)
 }
 
+// 592-2: инструменты канала Telegram приходят в сессию только с результатом команды и только после того, как плагин подключился, —
+// а он подключается через 1–7 с после старта (журналы MCP главного агента 2026-10-20…24), когда первое поручение уже ушло.
+// ✗ 82309b3b (2026-10-24 18:41Z): главный агент дважды ответил на сообщение архитектора сразу текстом — «инструмента reply у меня
+// нет». Поэтому `person` ждёт канал своей сессии: плагин пишет свой pid в `bot.pid` папки бота при старте, прямо перед рукопожатием
+// MCP, и стирает при выходе (telegram 0.0.7, server.ts :78, :652, :663). Живой pid — канал встал; 12 с без него — говорим как есть.
+const sleep = (ms) => new Promise((done) => setTimeout(done, ms))
+async function channelUp(dir, capMs = 12_000) {
+  const pidFile = join(dir, 'bot.pid')
+  const until = Date.now() + capMs
+  for (;;) {
+    try {
+      const pid = Number(readFileSync(pidFile, 'utf8'))
+      if (pid > 1) {
+        process.kill(pid, 0)
+        const age = Date.now() - statSync(pidFile).mtimeMs
+        if (age < 2000) await sleep(2000 - age)
+        return true
+      }
+    } catch { /* файла нет или процесса нет — канал ещё не встал */ }
+    if (Date.now() >= until) return false
+    await sleep(250)
+  }
+}
+
 if (cmd === 'person') {
   const tg = join(ROOT, 'data', 'services', 'build', 'channel', 'telegram')
   const p = readJson(join(tg, 'person.json'), null)
@@ -243,7 +267,8 @@ if (cmd === 'person') {
   const allow = readJson(join(tg, 'access.json'), null)?.allowFrom
   const chat = p?.chatId ?? p?.chat_id ?? p?.id ?? (Array.isArray(allow) && allow.length ? allow[0] : null)
   const bot = botOf('build')
-  if (bot && chat) console.log(`Telegram bot @${bot} is yours: write to the architect with the reply tool, chat_id ${chat}, language ${p?.lang ?? LANG}.`)
+  if (bot && !(await channelUp(tg))) console.log(`Telegram bot @${bot} is yours, but its channel did not start in this session — the architect reads you in the core's terminal ${ORIGIN}/${LANG}/architect/build/terminal: answer there and say that the bot is silent.`)
+  else if (bot && chat) console.log(`Telegram bot @${bot} is yours and its channel is up: write to the architect with the reply tool, chat_id ${chat}, language ${p?.lang ?? LANG}.`)
   else if (bot) console.log(`Telegram bot @${bot} is yours, but the architect has not written to it yet — answer in the core's terminal ${ORIGIN}/${LANG}/architect/build/terminal.`)
   else console.log(`No Telegram bot for the main agent: the architect reads you in the core's terminal ${ORIGIN}/${LANG}/architect/build/terminal — answer there.`)
   process.exit(0)
