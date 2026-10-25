@@ -46,10 +46,10 @@ const SCAN_EXT = /\.(ts|tsx|js|jsx|mjs|cjs|md|json)$/
 const SKIP_DIR = new Set(["node_modules", ".git", ".turbo", "dist", "build", ".vercel", ...FOREIGN_DIRS])
 const SKIP_PREFIX = [".next"]
 const SKIP_FILE = /\.generated\.|package-lock\.json$|\.tsbuildinfo$/
-// 🔒 556-11 (2026-10-23): папки разборов `data/services/reverse/reports` — снятые с ЧУЖИХ сайтов страницы и скрипты (улики REA), тот же
-// машинный вывод, что `.next`: первый живой разбор (tinylaunch) принёс U+FFFD в сжатом чужом JavaScript и уронил prebuild ядра. Наш
-// текст там не живёт; судить его — значит «чинить по букве» чужой сайт. Путь сверяется от корня проекта, а не по имени папки.
-const SKIP_PATH = ["data/services/reverse/reports"]
+// 🔒 556-11 (2026-10-23): чужой машинный вывод не судится — первый живой разбор (tinylaunch) принёс U+FFFD в сжатом чужом JavaScript и
+// уронил prebuild ядра. С 594-2 разборы лежат в папках элементов (`WEB4-ITEMS` сторож не обходит), а в ядре — браузер разбора и профили
+// тестовых учётных записей (`data/study`): страницы и файлы чужих сайтов. Путь сверяется от корня проекта, а не по имени папки.
+const SKIP_PATH = ["data/study"]
 
 // The single detection rule (mirrors hasBrokenChar in the content emitters). Returns the codepoint
 // of the first offending char in a string, or -1. Allows tab(09)/LF(0A)/CR(0D).

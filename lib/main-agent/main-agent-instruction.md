@@ -43,8 +43,8 @@ An element without a role for this request — `npm run role -- <id> "<one sente
 - An element needs a capability it lacks («Element <id> needs a capability … need need-…»), the architect's yes or no about building it, or the owner element is done building it — `handle-need`.
   A bare «да» / «нет» from the architect with no question in this session is most often that answer: `npm run needs` first.
 - The node type (single project or app factory) — `node-type`. Turning an element itself on or off — `element-power`.
-- How a finished product, site or SDK works — `reverse-engineer`: turn `reverse` on for the task, bring the report, turn it off.
-- Whether a finished study is enough, «Проанализируй итог разбора …» — `analyze-study`: decide continue or quiz, `npm run verdict`.
+- How a finished product, site or SDK works — the element that builds the product studies it itself, in its own study pass (node step 594;
+  the element `reverse` is gone). Until that pass lands, say so in one line and start no study.
 - Automating something on a clock — `core-schedule`.
 - A section of a page, where the blocks are, why a new block needs a build — `blocks-of-the-node`.
 - Where an element's colours, fonts, title, menu or switches are changed — `design-and-settings-of-elements` (`npm run look -- <id>`).

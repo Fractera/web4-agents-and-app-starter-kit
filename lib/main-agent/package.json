@@ -22,8 +22,6 @@
     "web4": "node ../../scripts/element-web4.mjs",
     "site-rules": "node ../../scripts/site-rules.mjs",
     "study": "node ../../scripts/study.mjs",
-    "report": "node ../../scripts/main-agent-cli.mjs report",
-    "verdict": "node ../../scripts/main-agent-cli.mjs verdict",
     "look": "node ../../scripts/main-agent-cli.mjs look"
   }
 }

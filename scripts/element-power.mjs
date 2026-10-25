@@ -45,20 +45,17 @@ if (action === 'off') {
   try { power.setOff(id, rest.join(' '), ROOT) } catch (e) { say(`===POWER_FAILED=== ${e.message}`); process.exit(1) }
   for (const n of names) pm2(['delete', n])
   pm2(['save'])
-  // 563-3: an element may keep a browser of its own outside pm2 (reverse: `npm run browser:start`, its state in
-  // data/services/<id>/browser.json). Turning the element off stops it too: a browser left alone holds hundreds of MB (9 processes,
+  // 563-3, moved by 594-2: the study browser lives in the core (scripts/study-browser.mjs, data/study/browser/state.json) and remembers
+  // the element that started it. Turning that element off stops it too: a browser left alone holds hundreds of MB (9 processes,
   // ~375 MB of its own memory measured on 2026-10-22) and nobody would close it.
-  const browserState = join(ROOT, 'data', 'services', id, 'browser.json')
+  const browserState = join(ROOT, 'data', 'study', 'browser', 'state.json')
   if (existsSync(browserState)) {
-    try {
-      const { pid } = JSON.parse(readFileSync(browserState, 'utf8'))
-      if (Number.isInteger(pid)) {
-        if (IS_WIN) spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' })
-        else { try { process.kill(-pid, 'SIGTERM') } catch { try { process.kill(pid, 'SIGTERM') } catch { /* already gone */ } } }
-        say(`  the browser of ${id} is stopped (pid ${pid})`)
-      }
-    } catch { /* an unreadable state file: nothing to stop */ }
-    rmSync(browserState, { force: true })
+    let owner = null
+    try { owner = JSON.parse(readFileSync(browserState, 'utf8')).element ?? null } catch { /* an unreadable state file: not ours to stop */ }
+    if (owner === id) {
+      const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'study-browser.mjs'), 'stop'], { cwd: ROOT, encoding: 'utf8', windowsHide: true })
+      say(`  the study browser ${id} started is stopped: ${(r.stdout || '').trim().split('\n').pop()}`)
+    }
   }
   say(`===POWER_OFF=== ${id}: ${power.reasonIn(power.offOf(power.readRegistry(ROOT).services.find((s) => s.id === id)))}`)
   process.exit(0)

@@ -3,7 +3,11 @@
 // закроет окно); итог — `npm run study -- list`. Пароль не вводит никто, кроме человека, в самом окне.
 import { spawn, spawnSync } from 'node:child_process'
 import { join } from 'node:path'
-import { endStudy, listStudy, siteOf } from '../lib/study/study.mjs'
+
+// 🛑 594-2: главный агент зовёт команду из `data/main-agent` (npm запускает скрипт в папке своего package.json), а папки учётных
+// записей считаются от `process.cwd()` — сначала встать в корень ядра, потом читать (✗ до 594-2 `list` смотрел в чужую папку).
+process.chdir(join(import.meta.dirname, '..'))
+const { endStudy, listStudy, siteOf } = await import('../lib/study/study.mjs')
 
 const [command, input, ...rest] = process.argv.slice(2)
 const say = (m) => console.log(m)

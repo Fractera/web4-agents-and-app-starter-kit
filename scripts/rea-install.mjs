@@ -22,7 +22,7 @@ const now = () => new Date().toISOString()
 
 if (!tool.nodeOk()) {
   // Ни одного файла в `data/tools/rea/` — отказ называется на странице по версии Node, а не по записи.
-  console.error(`REA ${tool.VERSION} needs Node ^22.19.0 || ^24.11.0 || >=26.0.0; this node runs ${process.versions.node}.`)
+  console.error(`REA ${tool.VERSION} needs Node ^22.23.4 || ^24.22.1 || >=26.12.1; this node runs ${process.versions.node}.`)
   process.exit(3)
 }
 

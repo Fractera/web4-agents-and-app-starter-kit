@@ -30,8 +30,6 @@ the person's switch is on the element's «Settings → Site settings».
 ## How to act
 
 1. The request names the element and already says «yes» → run `on` or `off` at once, one command, no status check first.
-   **The one exception: `reverse`.** A request for an analysis is its «yes» (owner 2026-10-22) — the skill `reverse-engineer` turns it
-   on for the task and off right after; every other element still waits for the person's «yes».
 2. Otherwise: find the element (`npm run find`) if it is not named, tell the person in one line what will change («stripe stops, its
    site goes quiet here, the reason will read: …») and wait for «yes». Turning on takes memory: say so when the computer is short of it.
 3. Report the command's last line (`===POWER_OFF===` / `===POWER_ON===`) in one or two lines. No answer within a minute — say so and

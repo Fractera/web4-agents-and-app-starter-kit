@@ -7,7 +7,6 @@
   "config": "Keeps the project settings (name, texts, languages, search, header, footer) and signals elements when they change (MCP get_project_settings).",
   "design": "Keeps the project look (colours of both themes, fonts, corners) and signals elements when it changes (MCP get_project_settings, subscribe).",
   "graph": "The node's shared knowledge graph (LightRAG): elements store what they learn as entities and links and find it again by meaning.",
-  "reverse": "Studies how a finished site or app works and reports it in the product's own words for the product quiz; the node turns it on only for one task.",
   "root": "The project's main site on the root domain.",
   "blocks": "A catalog of ready page blocks in one style that elements take instead of designing pages from scratch.",
   "stripe": "The node’s payment element: meant to take card payments through the person’s Stripe account for the elements of this node (Settings → Payments → Web2); turned off until card payments are built."
