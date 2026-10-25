@@ -3744,3 +3744,48 @@ behaviour of 592-4 («the system writes to you itself»). Details and proofs —
   `/code/development-docs/development-steps/completed-steps/592-3.md`. A live check of the bridge that costs no tokens: wake an element with
   no task (`POST /api/agents/wake {"service":"<id>"}`) — `claude` starts and sends nothing to the model; an element whose folder Claude
   Code does not trust yet stops on the trust question, which goes through the same `tellWaiting`.
+
+## The quiz leads the work: stages on two levels, build passes as sessions, the mark of the studied, the rule our architecture (step 590, 2026-10-25)
+
+The owner's thoughts (Telegram, 2026-10-23) and his answers verbatim — `/code/development-docs/development-steps/completed-steps/590-main.md`;
+the plan — «Подтвердить, делать здесь»; switching a pass — «Да, командой агента (Рекомендую)»; humanizer and the quiz — «Полировка в
+проходе текстов (Рекомендую)»; pagination — «С первым списком продукта (Рекомендую)». Proofs — `completed-steps/590-1.md` … `590-8.md`.
+- **What was studied stays marked as somebody else's (590-1, 590-2).** The graph element (`services/graph/graph.py`, runs per call, no
+  rebuild): an insert may carry `file_path` (≤ 300 characters, otherwise refused with the field's name); a query marks every entity, link
+  and chunk `origin: external-study` (its `file_path` holds `external-study:<task>`) or `node`, and adds one `notice` when the answer holds
+  a studied product. The `reverse-engineer` skill of `reverse` inserts with `file_path: "external-study:<task>"`; the live TinyLaunch graph
+  was re-marked by inserting it again (a custom-KG insert rewrites an entity, it does not merge). In elements: the report copy (`npm run
+  reverse -- get <task>`) starts with the field `origin`; `npm run graph` (address from `/api/node/a2a?address=graph`, the node key from
+  `.env.local`) prints the notice first and `[external-study <task>]` or `[node]` on every line; `check:product` item 8 fails a copy
+  without the mark. 🛑 Search by meaning always returns the nearest: «nothing» comes only from the filter `--task` or an empty graph.
+- **The rule our architecture, never theirs (590-3).** The words live once in `scripts/our-architecture.mjs` (both templates, root,
+  reverse); the paragraph under `<!-- RULE: our-architecture -->` stands word for word in `build.md`, the design pass, `product-quiz`,
+  `product-clone`, reverse's `reverse-engineer` and the main agent's `reverse-engineer` and `analyze-study`; `check-architecture-rule` in
+  `prebuild` fails a build that lost it or changed one word. A quote «…» in an element's documents stays on one line — `check-dev-docs`
+  reads lines.
+- **Stages on two levels (590-4).** `product-quiz`: every stage as a draft right after the study, in detail only the current one (the
+  first without `done`); a stage is done by the person's words (`done: {date, said}`) → back to the quiz for the next one; a step is one
+  business feature of a stage (line `Stage: N`); a feature that grows reopens its step (the plan back from git into `steps-new/`).
+  `check:product` item 9: `done` with a date and words, `Stage:` names an existing stage, a plan of a later stage is red, a reopened step of
+  an earlier stage is legal. Core: `lib/web4-items/product-quiz.ts` gives every stage `done`, `state` (done · current · later) and its
+  `steps`; a step numbered in both `steps-new/` and `steps-done/` is listed once in its most active state; the page —
+  `components/element-docs/product-quiz.client.tsx`.
+- **Build passes are sessions, not subagents (590-5).** `lib/agent-kit/modes.cjs`: passes `main · design · texts`, chosen by the first
+  words «Build process:», «Build process, design:», «Build process, texts:»; a vendored skill is on only in the passes of the `Pass:` line
+  of its `SOURCE.md` (the words before the dash) and closed to reading elsewhere; texts run on sonnet, main and design on opus. The bridge
+  picks the pass when a session is born; a live session of another pass is not killed — the pass waits in a queue and starts when that
+  session closes (a record older than half an hour is dropped on exit, no timers); `FRACTERA_PASS` in the session's env; `npm run pass --
+  <pass>` in an element (`===PASS_SAME===` / `===PASS_QUEUED===`). Describe and passport tasks open the texts pass
+  (`lib/web4-items/element-describe.ts`). `npm run check:modes` checks every pass. Why sessions: a subagent has no `AskUserQuestion`, does
+  not see the conversation and returns only its result; a loaded skill stays in the session until it ends (Claude Code docs, read
+  2026-10-25) — design and texts go in rounds with the person.
+- **The design skill of the project (590-6)** is `blocks.designSkill` in the decisions of «Design» (section «Design skill of the project»
+  on its page, names from `WEB4-ITEMS-REGISTRY/design-skills.json`): it reaches every element following «Design» with the branch `blocks` of
+  the same signal as colours — no build. `npm run design-skill` in an element: link on and a skill chosen → «from Design»; link on, none
+  chosen → its own; set apart (`links.json` `design: false`) → its own (the command strips a BOM). The design pass of a stage: skill →
+  pages → blocks (`find · show · add`; nothing fits — a request to «Blocks», or a block inside the element on a factory) → highlight
+  addresses → registry → static skeletons; lists — pages with server search like `/reviews` of lagrix. The main agent sends design work
+  with «Build process, design:» (skill `blocks-of-the-node`).
+- Pins (`6c7fa4f`): custom template v0.3.143, native v0.1.27, root v3.0.3, graph v1.1.14, reverse v0.2.8, design v1.1.11, blocks v1.4.7.
+- 🛑 Not built: the pagination tool with server search (with the first product list), a pass button on the terminal page, a graph split
+  by owners on a factory, a live run of the passes by an agent (only by the owner's word, with its price).
