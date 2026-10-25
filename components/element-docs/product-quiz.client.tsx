@@ -45,6 +45,12 @@ export type ProductQuizWords = {
   stages: string
   stageWorks: string
   stageReady: string
+  /** 590-4: the state of a stage («{date}» is replaced in `stageDone`), the head of its steps, and the line of a current stage with none. */
+  stageCurrent: string
+  stageDone: string
+  stageLater: string
+  stageSteps: string
+  stageNoSteps: string
   /** 556-4: the references of a product like an existing one (skill `product-clone`). «{covered}», «{areas}», «{assigned}», «{total}»,
    *  «{later}» and «{count}» are replaced. */
   references: string
@@ -453,6 +459,10 @@ export function ProductQuizIsland({ item, lang, words, task }: { item: string; l
                   <Small className="font-mono text-muted-foreground">{s.n}</Small>
                   <P className="font-medium">{s.name}</P>
                   {statusBadge(s.status, s.confirmed?.date)}
+                  {/* 590-4: only the current stage is planned in detail; the next one waits for the person's «it works». */}
+                  <Badge variant={s.state === "current" ? "default" : "outline"} data-quiz-stage-state={s.state}>
+                    {s.state === "done" ? fill(words.stageDone, { date: s.done?.date ?? "" }) : s.state === "current" ? words.stageCurrent : words.stageLater}
+                  </Badge>
                 </div>
                 <Small>{words.stageWorks}: {s.works}</Small>
                 <Small>{words.stageReady}: {s.ready}</Small>
@@ -461,6 +471,20 @@ export function ProductQuizIsland({ item, lang, words, task }: { item: string; l
                   <Small className="text-muted-foreground" data-quiz-stage-parity={s.n}>
                     {fill(words.stageParity, { count: refs.scenarios.filter((o) => o.stage === s.n).length, total: refs.scenarios.length })}
                   </Small>
+                )}
+                {s.steps.length > 0 ? (
+                  <div className="flex flex-col gap-0.5" data-quiz-stage-steps={s.n}>
+                    <Small className="text-muted-foreground">{words.stageSteps}</Small>
+                    <ul className="flex flex-col gap-0.5">
+                      {s.steps.map((st) => (
+                        <li key={st.number} data-quiz-stage-step={st.number}>
+                          <Small><span className="font-mono">{st.number}</span> · {st.title} · {words.stepState[st.state]}</Small>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  s.state === "current" && <Small className="text-muted-foreground">{words.stageNoSteps}</Small>
                 )}
               </li>
             ))}
