@@ -3529,6 +3529,11 @@ Owner, verbatim (all words — `/code` `development-docs/development-steps/compl
 
 ## Reverse engineering and the product quiz — one cycle (step 563, 2026-10-22)
 
+🪦 **Step 594 (2026-10-25) removed the path of this section:** the element `reverse`, its doors `/api/node/reverse-report*`, the main
+agent's skills `reverse-engineer` and `analyze-study`, the report form `report.json`/`report.md` and the graph in the study path. What
+lives instead — «Studies on REA's own architecture» (step 594) at the end of this file. The bullets below are history; the door
+`GET /api/node/elements` and the quiz's stages live on.
+
 The owner's words (2026-10-22): the quiz and the reverse engineering are one cycle — «квиз может существовать без реверса инжиниринг а
 вот риверс инжиниринг в концепции нашего проекта вообще не может существовать без Quiz»; the heavy tool is off by default and the node's
 agent turns it on for a task and off after it; the analysis covers SDKs too.
@@ -3557,6 +3562,11 @@ agent turns it on for a task and off after it; the analysis covers SDKs too.
   the owner's «yes» with the price).
 
 ## A product like an existing one: site rules, references, test accounts for internal pages (step 556, 2026-10-22)
+
+🪦 **Step 594 (2026-10-25):** the «Reverse engineering» page lost «Finished studies», the decision with its orange sign-in card, the
+event stream, series and screens; the study browser and its guard moved from the element `reverse` into the core
+(`scripts/study-browser.mjs`, `scripts/study-guard.mjs`); the skills of `reverse` and of the main agent named here are gone; test accounts
+live in `data/study/accounts`. Site rules, test accounts and the decisions R1/R2 live on — see «Studies on REA's own architecture».
 
 The owner, 2026-10-22: a site whose rules forbid it is never analysed — «он должен предоставить серии скриншотов последовательно»;
 similar sites whose rules allow it are analysed one by one; internal pages the agent studies itself, in an account that «не должен быть
@@ -3789,3 +3799,43 @@ the plan — «Подтвердить, делать здесь»; switching a pa
 - Pins (`6c7fa4f`): custom template v0.3.143, native v0.1.27, root v3.0.3, graph v1.1.14, reverse v0.2.8, design v1.1.11, blocks v1.4.7.
 - 🛑 Not built: the pagination tool with server search (with the first product list), a pass button on the terminal page, a graph split
   by owners on a factory, a live run of the passes by an agent (only by the owner's word, with its price).
+- 🪦 Step 594 (2026-10-25): the graph left the study path — the bullet «What was studied stays marked…» (report copies, `npm run graph`,
+  `external-study` in the graph) is history, and the rule's words became «Everything a study holds about a studied product — REA's
+  records in `study/`, screenshots, notes» in every template and root. The rest of this section lives on.
+
+## Studies on REA's own architecture: the element's study pass, its study/, REA's ledger beside the quiz (step 594, 2026-10-25)
+
+The owner's words (2026-10-25): «Инженеры создатели REA сделали все оптимально и идеально. Вы не должны вести в их проект, мы не должны
+трогать ничего в их проекте … работать он будет как ядро, но разборы он должен хранить внутри каждого элемента»; «Если он не имеет
+альтернативного инструмента для работы с lightRag, и если мы не используем это его нативное свойство а попытайтесь создать свое это было
+фундаментальная ошибка. Планируем переподключения к его оригинальной архитектуре». The plan and every decision —
+`/code/development-docs/development-steps/completed-steps/594-main.md`.
+- **REA is one copy in the core** (`data/tools/rea`), never edited; its own skill, MCP tools, records (Evidence) and ledger of
+  obligations are used as they are. The pin is 6.8.0 (`rea-tool.cjs`), which needs Node ^22.23.4: on Node 22.23.3 the installer refuses
+  (RC 3) and the core keeps 6.7.0 until the owner updates Node (admin rights).
+- **Gone (594-2):** the element `reverse`, its pages and doors, the main agent's `reverse-engineer` and `analyze-study`, its commands
+  `report` and `verdict`; the graph is out of the study path. **The study browser and its write guard are one copy in the core**
+  (`scripts/study-browser.mjs`, `scripts/study-guard.mjs`; `data/study/browser/state.json` remembers the element that started it, and
+  `element-power off` of that element stops it); test accounts — `data/study/accounts` (`lib/study/study.mjs`).
+- **The study pass (594-3, 594-4)** — `lib/agent-kit/modes.cjs`: the fourth build pass `study`, words «Build process, study:», model opus,
+  laws in the element's `.claude/modes/build-study.md`; REA's vendored skill `reverse-engineer-anything` (`SOURCE.md` `Pass: study`) is on
+  only there; REA's MCP server only in the study pass session (`modes.mcpArgs` writes a per-session `--mcp-config`, output schemas off).
+  An element's commands: `npm run rea`, `npm run study -- rules | accounts | login <site> | browser start|stop|status`, `npm run ledger --
+  <folder>`. A study is `study/<YYYY-MM-DD>-<site>/` of the element, out of git: REA's records, `notes.md`, `bundle*.json`
+  (`export_evidence_bundle` — the command line cannot merge records into one canonical bundle), `obligations.json`, `ledger.json`.
+- **The quiz beside the ledger (594-4, 594-5):** `references.products[].study`, `references.scenarios[].obligations`; `check-product`
+  reconciles them with the ledgers; a stage is done by the person's words, and obligations left open are accepted by name in
+  `done.openObligations` — REA reads a proof record and makes none («this operation label does not expose a proof executor»), so the
+  node never forges one.
+- **In the core (594-6):** «Product design → Reverse engineering» of an element and root's own page `architect/root/reverse-engineering`:
+  «Start» opens the terminal of the element's own agent with «Build process, study: …»; below — its studies from `GET
+  /api/node/studies?item=` (architect/admin: counts, the first lines of `notes.md`, the bundle, the ledger's summary — nothing of the
+  studied site; a registry element with its own static folder, like root, is asked by its id). The quiz page shows a scenario's
+  obligations and a stage's open and accepted ones (`QuizLedgers` of `lib/web4-items/product-quiz.ts`); the quiz PDF takes screens from
+  the study folders the references name. The entry card «Use reverse engineering» leads to root's page. The main agent hands a study to
+  the element that builds the product (skill `study-for-element`). The sign-in window is opened by the element's agent
+  (`npm run study -- login <site>`), as the owner chose in 556-9 («Скриншоты, агент спросит»).
+- Pins (step 594-7): custom template v0.3.144, native v0.1.28, root v3.0.4.
+- 🛑 Not built / not proven: a live study by an element's agent (step 593, only by the owner's word with its price); closing an
+  obligation by REA's proof; the native template's `check-product` still checks copies of old reports (`product/reverse/<task>`) —
+  native elements have no study pass (the owner decides whether they need one).
