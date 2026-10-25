@@ -78,6 +78,7 @@
     "check:process-env": "node scripts/check-process-env.mjs",
     "main-agent:install": "node scripts/main-agent-install.mjs",
     "qa:agent": "node scripts/qa-agent-journal.mjs",
+    "skills": "node scripts/skills.mjs",
     "agent:screen": "node scripts/agent-screen.mjs",
     "check:modes": "node scripts/check-modes.mjs",
     "check:boundary-hook": "node scripts/check-boundary-hook.mjs",
