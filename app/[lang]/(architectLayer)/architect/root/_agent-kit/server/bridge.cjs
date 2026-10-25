@@ -185,7 +185,9 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
   const off = viaChannel ? {} : { [telegram.PLUGIN]: false }
   // 552-5: системная подсказка сессии — фраза режима и, если у элемента есть `.claude/modes/<режим>.md`, законы режима (одним файлом).
   // 590-5: у сессии строительства — свой проход (`main` · `design` · `texts`): свои вендорные навыки, файл законов прохода, модель.
-  if (modes.hasGroups(cwd)) args = [...args, '--settings', JSON.stringify(modes.modeSettings(cwd, mode, off, pass)), ...modes.promptArgs(cwd, mode, path.join(process.cwd(), 'data', 'node', 'agent-prompts'), service, pass)]
+  // 594-4: у прохода study — сервер MCP REA на эту сессию (`modes.mcpArgs`); перед `--settings`: `--mcp-config` забирает список значений.
+  const mcp = typeof modes.mcpArgs === 'function' ? modes.mcpArgs(cwd, mode, path.join(process.cwd(), 'data', 'node', 'agent-prompts'), service, pass) : []
+  if (modes.hasGroups(cwd)) args = [...args, ...mcp, '--settings', JSON.stringify(modes.modeSettings(cwd, mode, off, pass)), ...modes.promptArgs(cwd, mode, path.join(process.cwd(), 'data', 'node', 'agent-prompts'), service, pass)]
   else if (!viaChannel) args = [...args, '--settings', JSON.stringify({ enabledPlugins: off })]
   // 591: душа узла (`lib/agent-kit/soul.md`) — в системной подсказке каждой сессии: у элемента с группами её кладёт `promptArgs`
   // первой, у остальных (главный агент, элемент старого шаблона) — здесь, одна.
