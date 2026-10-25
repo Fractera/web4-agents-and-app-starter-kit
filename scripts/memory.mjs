@@ -6,6 +6,8 @@
 //   npm run memory -- backfill  the main agent's past sessions into the diary data/node/memory/episodes (595-6).
 //   npm run memory -- brief <id> what the agent <id> gets at the start of a new session, before its first request (595-7): the text
 //                               of the SessionStart hook (lib/agent-kit/memory/brief.cjs) and its size; nothing remembered — «empty».
+//   npm run memory -- recall <id> "<message>"  what the agent <id> gets before this message of the person (595-8): the text of the
+//                               UserPromptSubmit hook (lib/agent-kit/memory/recall.cjs); nothing related — «nothing».
 // Nothing runs by itself: a person or the main agent calls it.
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -75,7 +77,13 @@ if (cmd === 'adopt') {
   const text = createRequire(import.meta.url)('../lib/agent-kit/memory/brief.cjs').brief(id)
   if (text) console.log(text)
   console.log(`===MEMORY_BRIEF=== ${id}: ${text ? `${text.length} characters` : 'empty — no block at the start'}`)
+} else if (cmd === 'recall') {
+  const [, id, ...said] = process.argv.slice(2)
+  if (!id || !said.length) { console.log('===MEMORY_FAIL=== recall <agent id> "<message of the person>" (the main agent is build)'); process.exit(2) }
+  const text = createRequire(import.meta.url)('../lib/agent-kit/memory/recall.cjs').recall(said.join(' '), id)
+  if (text) console.log(text)
+  console.log(`===MEMORY_RECALL=== ${id}: ${text ? `${text.split('\n').length - 1} finding(s), ${text.length} characters` : 'nothing related — no lines before this message'}`)
 } else {
-  console.log('===MEMORY_FAIL=== commands: adopt, backfill, brief')
+  console.log('===MEMORY_FAIL=== commands: adopt, backfill, brief, recall')
   process.exit(2)
 }
