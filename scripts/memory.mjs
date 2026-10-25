@@ -15,6 +15,8 @@
 //                               comes back. The picture is separate: the main agent deletes a fact's file and its index line.
 //   npm run memory -- off | on  the switch data/node/memory/settings.json: off — no agent writes the diary, gets the last exchange at
 //                               start or associations before a message; what is said meanwhile is never kept, not even after «on».
+//   npm run memory -- vectors   595-8б: the lines of the person and of the agents without a vector get one (OpenAI, the core's key;
+//                               kept by the node's vector element) — the meaning search in any language; «forget» deletes them too.
 // Nothing runs by itself: a person or the main agent calls it.
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -87,10 +89,11 @@ if (cmd === 'adopt') {
 } else if (cmd === 'recall') {
   const [, id, ...said] = process.argv.slice(2)
   if (!id || !said.length) { console.log('===MEMORY_FAIL=== recall <agent id> "<message of the person>" (the main agent is build)'); process.exit(2) }
-  const text = createRequire(import.meta.url)('../lib/agent-kit/memory/recall.cjs').recall(said.join(' '), id)
+  const t0 = Date.now()
+  const { text, how, why } = await createRequire(import.meta.url)('../lib/agent-kit/memory/recall.cjs').recallBest(said.join(' '), id)
   if (text) console.log(text)
-  console.log(`===MEMORY_RECALL=== ${id}: ${text ? `${text.split('\n').length - 1} finding(s), ${text.length} characters` : 'nothing related — no lines before this message'}`)
-} else if (cmd === 'show' || cmd === 'forget' || cmd === 'off' || cmd === 'on') {
+  console.log(`===MEMORY_RECALL=== ${id}: ${text ? `${text.split('\n').length - 1} finding(s), ${text.length} characters` : 'nothing related — no lines before this message'} · found by ${how}${why ? ` (meaning search unavailable: ${why})` : ''} · ${Date.now() - t0} ms`)
+} else if (cmd === 'show' || cmd === 'forget' || cmd === 'off' || cmd === 'on' || cmd === 'vectors') {
   const require = createRequire(import.meta.url)
   const { EPISODES, SETTINGS, memoryOn } = require('../lib/agent-kit/memory/record.cjs')
   const { indexEntries, PICTURE, NOTES } = require('../lib/agent-kit/memory/brief.cjs')
@@ -106,8 +109,28 @@ if (cmd === 'adopt') {
     renameSync(`${file}.tmp`, file)
   }
   const flagOf = (name) => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] ?? '' : null }
+  // 595-8б: the vectors of the diary's lines live in the node's vector element (lib/agent-kit/memory/embed.cjs).
+  const embed = require('../lib/agent-kit/memory/embed.cjs')
 
-  if (cmd === 'off') {
+  if (cmd === 'vectors') {
+    // The lines of the person and of the agents that have no vector yet get one — in batches, one OpenAI call per batch.
+    if (!memoryOn()) { console.log('===MEMORY_VECTORS=== memory is off — nothing is sent anywhere (npm run memory -- on)'); process.exit(0) }
+    const have = embed.ledger().ids
+    const todo = months().flatMap(lines).map(parse).filter((r) => r && (r.who === 'person' || r.who === 'agent') && !have[embed.rowId(r)])
+    let saved = 0
+    let tokens = 0
+    try {
+      for (let i = 0; i < todo.length; i += 32) {
+        const r = await embed.save(todo.slice(i, i + 32), { ms: 30000 })
+        saved += r.saved
+        tokens += r.tokens
+      }
+      console.log(`===MEMORY_VECTORS=== ${saved} line(s) got a vector (${tokens} tokens of OpenAI); ${Object.keys(embed.ledger().ids).length} line(s) have one now.`)
+    } catch (err) {
+      console.log(`===MEMORY_VECTORS_FAIL=== ${saved} line(s) got a vector before: ${err instanceof Error ? err.message : String(err)}`)
+      process.exit(1)
+    }
+  } else if (cmd === 'off') {
     mkdirSync(dirname(SETTINGS), { recursive: true })
     writeFileSync(SETTINGS, `${JSON.stringify({ on: false, since: new Date().toISOString() })}\n`)
     console.log('===MEMORY_OFF=== memory is off: no agent of this node writes the diary, gets the last exchange at the start or associations before a message. What is said meanwhile is never kept, not even after «on». Back on: npm run memory -- on')
@@ -121,9 +144,11 @@ if (cmd === 'adopt') {
     let gone = 0
     let kept = 0
     let files = 0
+    const removed = []
     for (const file of months()) {
       const all_ = lines(file)
       const keep = all ? [] : all_.filter((l) => localDay(parse(l)?.t) !== day)
+      for (const l of all_) if (!keep.includes(l)) { const r = parse(l); if (r) removed.push(r) }
       if (keep.length !== all_.length) { rewrite(file, keep); files += 1 }
       gone += all_.length - keep.length
       kept += keep.length
@@ -131,8 +156,12 @@ if (cmd === 'adopt') {
     const notes = lines(NOTES)
     const notesKept = all ? [] : notes.filter((l) => localDay(parse(l)?.t) !== day)
     if (notesKept.length !== notes.length) rewrite(NOTES, notesKept)
+    // 595-8б: a forgotten line's vector goes too — the vector element keeps the line's text beside it.
+    const ids = all ? Object.keys(embed.ledger().ids) : removed.map((r) => embed.rowId(r)).filter((id) => embed.ledger().ids[id])
+    const v = await embed.forget(ids)
     const what = all ? 'everything' : `${day} (this computer's clock)`
-    console.log(`===MEMORY_FORGET_OK=== ${what}: ${gone} diary line(s) in ${files} month file(s) and ${notes.length - notesKept.length} note(s) deleted; ${kept} line(s) of other days kept. ` +
+    console.log(`===MEMORY_FORGET_OK=== ${what}: ${gone} diary line(s) in ${files} month file(s), ${v.gone} vector(s) and ${notes.length - notesKept.length} note(s) deleted; ${kept} line(s) of other days kept. ` +
+      (v.left ? `⚠ ${v.left} vector(s) could not be deleted now (the vector element did not answer) — run the same command again. ` : '') +
       'The marks of read sessions stay, so nothing comes back. Claude Code keeps its own session logs until it deletes them itself (cleanupPeriodDays); the picture is separate — the main agent deletes a fact\'s file and its index line.')
   } else {
     const records = indexEntries(PICTURE)
@@ -159,6 +188,11 @@ if (cmd === 'adopt') {
       ...(rows.length ? [`By agent: ${Object.entries(byAgent).sort((a, b) => b[1] - a[1]).map(([a, n]) => `${a === 'build' ? 'main agent' : a} ${n}`).join(' · ')}`,
         `By day (newest first): ${days.slice().reverse().slice(0, 14).map((d) => `${d} — ${byDay[d]}`).join(' · ')}${days.length > 14 ? ` · and ${days.length - 14} earlier day(s)` : ''}`] : []),
       `Notes «where I stopped» of the main agent: ${lines(NOTES).length}`,
+      (() => {
+        const l = embed.ledger()
+        const words = rows.filter((r) => r.who === 'person' || r.who === 'agent').length
+        return `Meaning search: ${Object.keys(l.ids).length} of ${words} line(s) of the person and the agents have a vector${l.model ? ` (${l.model}, OpenAI; kept by the node's vector element)` : ''}; the missing ones — npm run memory -- vectors.`
+      })(),
       'Claude Code keeps its own session logs too and deletes them by itself (cleanupPeriodDays); the diary is the node\'s copy.',
       'To forget: a day — npm run memory -- forget --day <YYYY-MM-DD> · everything — forget --all · a fact of the picture — its file and index line · stop remembering — off',
     ]

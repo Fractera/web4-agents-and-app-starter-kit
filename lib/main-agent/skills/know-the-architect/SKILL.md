@@ -44,7 +44,8 @@ the last exchange given at a session's start and associations before a message. 
 answer ends with one line confirming what changed.
 - «Запомни …» about the person or how to work with them → a fact here. Anything else (an event, a thing, a number) → a short note in your
   memory until the node's memory element takes such words over (step 597).
-- «Что ты обо мне знаешь» → `npm run memory -- show`, then in plain words: the picture, how much of the diary is kept and since when.
+- «Что ты обо мне знаешь» → `npm run memory -- show`, then in plain words: the picture, how much of the diary is kept and since when, and
+  that the search by meaning sends each line to OpenAI for its vector (not used for training by default) and keeps it on this computer.
 - «Забудь X» (a fact about the person) → delete its file and its index line.
 - «Забудь, что было <день>» / «забудь вчерашний разговор» → `npm run memory -- forget --day <YYYY-MM-DD>` (the person's day, this
   computer's clock).
