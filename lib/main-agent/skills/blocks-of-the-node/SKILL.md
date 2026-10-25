@@ -39,3 +39,7 @@ Read the mode with `npm run node-type` (or the person changes it: skill `node-ty
 
 A request about a section of a page of element X goes to X's agent (`npm run task -- <id> "<the person's words>"` or its terminal), never
 to you: it knows its pages and its blocks. A request to change a block of the shared catalogue goes to the agent of **blocks**.
+Design work is the design pass of that element (node step 590-5): the task opens with «Build process, design:» —
+`npm run task -- <id> "Build process, design: <the person's words>"`; the node starts the session of that pass with its own skills.
+The design skill of the whole project (one owner) is chosen in «Design», section «Design skill of the project»; an element's agent reads
+which applies with `npm run design-skill` (node step 590-6).
