@@ -3,6 +3,9 @@
 //                               into the node: data/services/<id>/memory (the main agent's id is build). A copy — the old folder stays;
 //                               a file already in the node is never overwritten. The bridge points every session there
 //                               (autoMemoryDirectory), so a moved or renamed folder no longer loses an agent's memory (595-5).
+//   npm run memory -- backfill  the main agent's past sessions into the diary data/node/memory/episodes (595-6).
+//   npm run memory -- brief <id> what the agent <id> gets at the start of a new session, before its first request (595-7): the text
+//                               of the SessionStart hook (lib/agent-kit/memory/brief.cjs) and its size; nothing remembered — «empty».
 // Nothing runs by itself: a person or the main agent calls it.
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -66,7 +69,13 @@ if (cmd === 'adopt') {
   let total = 0
   for (const file of logs) total += recordSession(file, 'build')
   console.log(`===MEMORY_BACKFILL_OK=== ${logs.length} sessions of the main agent, ${total} lines written`)
+} else if (cmd === 'brief') {
+  const id = process.argv[3]
+  if (!id) { console.log('===MEMORY_FAIL=== brief <agent id> (the main agent is build)'); process.exit(2) }
+  const text = createRequire(import.meta.url)('../lib/agent-kit/memory/brief.cjs').brief(id)
+  if (text) console.log(text)
+  console.log(`===MEMORY_BRIEF=== ${id}: ${text ? `${text.length} characters` : 'empty — no block at the start'}`)
 } else {
-  console.log('===MEMORY_FAIL=== commands: adopt, backfill')
+  console.log('===MEMORY_FAIL=== commands: adopt, backfill, brief')
   process.exit(2)
 }

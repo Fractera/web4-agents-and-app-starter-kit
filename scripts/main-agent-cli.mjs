@@ -21,7 +21,8 @@
 //   supervise <id> main|architect|off [--max N] — кто ведёт элемент
 //   close <id>               — выключить агента элемента (548-20: включает поручение под надзором, выключает главный агент)
 //   person                   — как связаться с архитектором из этой сессии (Telegram главного агента или терминал ядра)
-//   done [--close]           — сказать узлу «закончил» (или закрыть свою сессию) без чтения ключей узла
+//   done [--close] [--note "<строка>"] — сказать узлу «закончил» (или закрыть свою сессию) без чтения ключей узла; `--note` — где
+//                              остановился, с неё начнётся твоя следующая сессия (595-7)
 //   telegram <id> [<ячейка> "<текст>"] — боты элемента (h2a · h2h · orders · work) или сообщение допущенным одного из них (552-6)
 // 🔒 Ничего не делается само: каждую команду запускает главный агент по слову человека или по событию надзора.
 
@@ -277,6 +278,14 @@ if (cmd === 'person') {
 // 548-13: «закончил» главного агента — этой командой, без чтения `.env.local` узла (✗ замерено 2026-10-20: по общему правилу
 // пробуждения «ключ из .env.local» главный агент прочитал файл ключей ядра целиком).
 if (cmd === 'done') {
+  // 595-7: `--note "<one line>"` — where you stopped and what is next; your next session starts with it (lib/agent-kit/memory/brief.cjs).
+  // Written before the core is told: `--close` ends this session.
+  const note = flag('--note')
+  if (note !== null) {
+    if (!note.trim() || note.startsWith('--')) fail('done --note "<where you stopped and what is next, one line>" [--close]')
+    const row = require('../lib/agent-kit/memory/brief.cjs').writeNote(note)
+    console.log(row ? '===NOTE_OK=== your next session starts with it' : '===NOTE_OFF=== the person switched memory off — the note is not kept')
+  }
   const r = await core('/api/agents/done', { method: 'POST', body: JSON.stringify({ service: 'build', ...(has('--close') ? { close: true } : {}) }) }).catch((e) => fail(`the core did not answer: ${e.message}`))
   console.log(r.body?.ok ? `===DONE_OK=== ${has('--close') ? 'closing this session' : 'the node knows you finished'}` : `===DONE_FAIL=== ${r.body?.reason ?? r.status}`)
   process.exit(r.body?.ok ? 0 : 1)

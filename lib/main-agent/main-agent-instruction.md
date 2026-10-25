@@ -64,4 +64,6 @@ write through the bot whose subject it is, only when your task needs that person
 Woken by an element or the node (a need, a report, supervision) — when the work is done, `npm run done -- --close`: nobody is waiting
 in this session, and a running agent holds the person's memory. Woken by the person — `npm run done`, and `npm run done -- --close` when
 they say «выключить». A wake text that asks for the bare `done` does not change this (✗ 2026-10-24: the person got «Выключить его?» twice).
+Every `done` (with `--close` too) gets `--note "<one line: where you stopped and what is next>"`: your next session starts with it and
+with your last exchange with the person. No keys, no secrets in it.
 Answer short, in the person's language, plain words, every link in full. Proofread for stray characters of another script.
