@@ -5,6 +5,7 @@
 //                               (autoMemoryDirectory), so a moved or renamed folder no longer loses an agent's memory (595-5).
 // Nothing runs by itself: a person or the main agent calls it.
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -57,7 +58,15 @@ if (cmd === 'adopt') {
     console.log(`${id}: ${r.copied} copied, ${r.kept} already in the node`)
   }
   console.log('===MEMORY_ADOPT_OK===')
+} else if (cmd === 'backfill') {
+  // 595-6: the main agent's past sessions into the diary, once, by the same reader as the hook; a second run writes nothing.
+  const { recordSession } = createRequire(import.meta.url)('../lib/agent-kit/memory/record.cjs')
+  const dir = join(homedir(), '.claude', 'projects', projectName(join(ROOT, 'data', 'main-agent')))
+  const logs = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.jsonl')).map((f) => join(dir, f)).sort((a, b) => statSync(a).mtimeMs - statSync(b).mtimeMs) : []
+  let total = 0
+  for (const file of logs) total += recordSession(file, 'build')
+  console.log(`===MEMORY_BACKFILL_OK=== ${logs.length} sessions of the main agent, ${total} lines written`)
 } else {
-  console.log('===MEMORY_FAIL=== commands: adopt')
+  console.log('===MEMORY_FAIL=== commands: adopt, backfill')
   process.exit(2)
 }

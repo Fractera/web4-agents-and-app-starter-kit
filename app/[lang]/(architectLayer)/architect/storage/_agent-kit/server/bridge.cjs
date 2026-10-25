@@ -172,7 +172,9 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
   // 595-5: the agent's native memory lives in the node (`modes.memoryDir`: data/services/<id>/memory); creating it here also makes the
   // service's own data folder exist, so the --add-dir below covers it and writing a memory asks nothing.
   const memDir = typeof modes.memoryDir === 'function' ? modes.memoryDir(element) : null
-  const mem = memDir ? { autoMemoryDirectory: memDir } : {}
+  // 595-6: the diary hooks (Stop, SessionEnd) ride in the same --settings; a working-process session gets none.
+  const memHooks = typeof modes.memoryHooks === 'function' ? modes.memoryHooks(element, mode) : null
+  const mem = { ...(memDir ? { autoMemoryDirectory: memDir } : {}), ...(memHooks ? { hooks: memHooks } : {}) }
   const ownData = path.join(process.cwd(), 'data', 'services', element)
   if (existsSync(ownData) && !args.includes(ownData)) args = ['--add-dir', ownData, ...(args.length ? args : ['--permission-mode', 'auto'])]
   // 569-3: свои встроенные инструменты папки агента (`.claude/launch-tools.txt`, `lib/agent-kit/modes.cjs`). 🛑 `--tools` забирает СПИСОК
@@ -198,7 +200,7 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
     if (mcp.length) args = [...args, ...mcp]
     // 595-5: one --settings per session; with the channel it must not turn the Telegram plugin off (548-20).
     if (!viaChannel) args = [...args, '--settings', JSON.stringify({ enabledPlugins: off, ...mem })]
-    else if (memDir) args = [...args, '--settings', JSON.stringify(mem)]
+    else if (Object.keys(mem).length) args = [...args, '--settings', JSON.stringify(mem)]
   }
   // 591: душа узла (`lib/agent-kit/soul.md`) — в системной подсказке каждой сессии: у элемента с группами её кладёт `promptArgs`
   // первой, у остальных (главный агент, элемент старого шаблона) — здесь, одна.

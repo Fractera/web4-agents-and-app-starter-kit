@@ -2,7 +2,7 @@
   "_": "Параметры установки комплекта агента. Пишет npm run agent-kit:add, читают мост и сторож. Руками не править: правьте мастер и повторите npm run agent-kit:update.",
   "service": "build",
   "workspace": "main-agent",
-  "version": "6906d1ceff6cb8de",
+  "version": "2443d03d5bd9ebd6",
   "pages": [
     {
       "template": "claude-code",
