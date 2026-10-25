@@ -105,7 +105,7 @@
     {
       "id": "design",
       "repo": "https://github.com/Fractera/fractera-design-starter.git",
-      "version": "v1.1.10",
+      "version": "v1.1.11",
       "provides": [
         "project-design"
       ],
@@ -118,7 +118,7 @@
     {
       "id": "graph",
       "repo": "https://github.com/Fractera/fractera-graph-lightrag-starter.git",
-      "version": "v1.1.13",
+      "version": "v1.1.14",
       "provides": [
         "knowledge-graph"
       ],
@@ -144,7 +144,7 @@
     {
       "id": "reverse",
       "repo": "https://github.com/Fractera/fractera-reverse-engineering-starter.git",
-      "version": "v0.2.7",
+      "version": "v0.2.8",
       "port": 24696,
       "provides": [
         "reverse-engineering"
@@ -170,7 +170,7 @@
     {
       "id": "root",
       "repo": "https://github.com/Fractera/fractera-root-starter.git",
-      "version": "v3.0.2",
+      "version": "v3.0.3",
       "port": 24683,
       "provides": [
         "site"
@@ -183,7 +183,7 @@
     {
       "id": "blocks",
       "repo": "https://github.com/Fractera/fractera-blocks-starter.git",
-      "version": "v1.4.6",
+      "version": "v1.4.7",
       "provides": [
         "page-blocks"
       ],

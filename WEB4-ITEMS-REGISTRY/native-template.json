@@ -2,5 +2,5 @@
   "_": "Where a native element is born from (node step 544, owner 2026-10-19: native elements come only from the Fractera repository, never sold, nothing of Lagrix). Read by scripts/item-birth.mjs with --native. A new template release = a new tag here.",
   "from": "fractera-native-item-starter",
   "repo": "https://github.com/Fractera/fractera-native-item-starter.git",
-  "version": "v0.1.26"
+  "version": "v0.1.27"
 }
