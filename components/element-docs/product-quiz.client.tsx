@@ -12,7 +12,7 @@ import type { TerminalDrawerWords, TerminalKit } from "@/_tools/terminal-drawer/
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { H2, H3, P, Small } from "@/components/ui/typography"
-import type { ProductQuiz, QuizItem, QuizStepState, QuizWork } from "@/lib/web4-items/product-quiz"
+import type { ProductQuiz, QuizItem, QuizLedgers, QuizStepState, QuizWork } from "@/lib/web4-items/product-quiz"
 
 // ISLAND OF THE PRODUCT QUIZ (node step 536-1). The person, 2026-10-18: «А вверху инструкция если хотите что-то добавить перейдите
 // (ссылка на терминал) (ссылка на Telegram если он есть) и скажите что вы хотите продолжить развитие продуктового квизы».
@@ -59,6 +59,13 @@ export type ProductQuizWords = {
   stageParity: string
   seenIn: string
   stageShort: string
+  /** 594-6: REA obligations of a scenario of the references — with the ledgers of this machine («{total}», «{verified}») and without
+   *  («{total}»); the line said once when no ledger is here; a stage's required open ones and those the person accepted («{ids}»). */
+  obligations: string
+  obligationsCount: string
+  noLedger: string
+  stageOpen: string
+  stageAccepted: string
   unknowns: string
   referenceRules: Record<string, string>
   referenceSources: Record<string, string>
@@ -179,7 +186,7 @@ function ItemWork({ it, words }: { it: QuizItem; words: ProductQuizWords }) {
   )
 }
 
-type Read = { quiz: ProductQuiz | null; problems: string[] }
+type Read = { quiz: ProductQuiz | null; problems: string[]; ledgers: QuizLedgers }
 
 const fill = (text: string, values: Record<string, string | number>) =>
   text.replace(/\{(\w+)\}/g, (all, key: string) => (key in values ? String(values[key]) : all))
@@ -227,10 +234,15 @@ export function ProductQuizIsland({ item, lang, words, task }: { item: string; l
     let live = true
     fetch(`${BASE}/api/node/product-quiz?item=${encodeURIComponent(item)}`, { cache: "no-store" })
       .then((r) => r.json())
-      .then((b: { ok?: boolean; quiz?: ProductQuiz | null; problems?: string[] }) => {
+      .then((b: { ok?: boolean; quiz?: ProductQuiz | null; problems?: string[]; ledgers?: QuizLedgers }) => {
         if (!live) return
-        if (b.ok) setRead({ quiz: b.quiz ?? null, problems: Array.isArray(b.problems) ? b.problems : [] })
-        else setFailed(true)
+        if (b.ok) {
+          setRead({
+            quiz: b.quiz ?? null,
+            problems: Array.isArray(b.problems) ? b.problems : [],
+            ledgers: b.ledgers ?? { studies: 0, ledgers: 0, obligations: [] },
+          })
+        } else setFailed(true)
       })
       .catch(() => live && setFailed(true))
     return () => {
@@ -271,6 +283,17 @@ export function ProductQuizIsland({ item, lang, words, task }: { item: string; l
   const items = quiz.modules.flatMap((m) => m.items)
   // 556-4: older readers of the door may not send the field — treat it as «no references».
   const refs = quiz.references ?? null
+  // 594-6: the ledgers of REA on this machine beside the quiz. Only shown here — the element's guard `check:product` reconciles them.
+  const byObligation = new Map(read.ledgers.obligations.map((o) => [o.id, o]))
+  const checked = read.ledgers.ledgers > 0
+  const obligationsOf = (ids: string[]) => checked
+    ? fill(words.obligations, { total: ids.length, verified: ids.filter((id) => byObligation.get(id)?.status === "verified").length })
+    : fill(words.obligationsCount, { total: ids.length })
+  const openOf = (n: number, accepted: string[]) => [...new Set((refs?.scenarios ?? []).filter((o) => o.stage === n).flatMap((o) => o.obligations))]
+    .filter((id) => {
+      const o = byObligation.get(id)
+      return !!o && o.required && !["verified", "blocked", "out-of-scope"].includes(o.status) && !accepted.includes(id)
+    })
   const confirmedCount = items.filter((i) => i.status === "confirmed").length
   const statusBadge = (s: QuizItem["status"], date?: string) =>
     s === "confirmed"
@@ -409,6 +432,9 @@ export function ProductQuizIsland({ item, lang, words, task }: { item: string; l
               later: refs.scenarios.filter((o) => o.notNow).length,
             })}
           </Small>
+          {!checked && (refs.products.some((p) => p.study) || refs.scenarios.some((o) => o.obligations.length > 0)) && (
+            <Small className="text-muted-foreground" data-quiz-no-ledger>{words.noLedger}</Small>
+          )}
           <ul className="flex flex-col gap-1">
             {refs.products.map((p) => (
               <li key={p.id} data-quiz-reference={p.id}>
@@ -428,6 +454,7 @@ export function ProductQuizIsland({ item, lang, words, task }: { item: string; l
                     <Small>
                       <span className="font-mono text-muted-foreground">{o.id}</span> {o.name} — {words.seenIn} {o.seenIn.join(", ")} ·{" "}
                       {o.stage !== null ? `${words.stageShort} ${o.stage}` : o.notNow ? words.notNow : "—"}
+                      {o.obligations.length > 0 && <span data-quiz-obligations={o.id}> · {obligationsOf(o.obligations)}</span>}
                     </Small>
                   </li>
                 ))}
@@ -470,6 +497,14 @@ export function ProductQuizIsland({ item, lang, words, task }: { item: string; l
                 {refs && refs.scenarios.length > 0 && (
                   <Small className="text-muted-foreground" data-quiz-stage-parity={s.n}>
                     {fill(words.stageParity, { count: refs.scenarios.filter((o) => o.stage === s.n).length, total: refs.scenarios.length })}
+                  </Small>
+                )}
+                {checked && openOf(s.n, s.done?.openObligations ?? []).length > 0 && (
+                  <Small data-quiz-stage-open={s.n}>{fill(words.stageOpen, { ids: openOf(s.n, s.done?.openObligations ?? []).join(", ") })}</Small>
+                )}
+                {(s.done?.openObligations.length ?? 0) > 0 && (
+                  <Small className="text-muted-foreground" data-quiz-stage-accepted={s.n}>
+                    {fill(words.stageAccepted, { ids: (s.done?.openObligations ?? []).join(", ") })}
                   </Small>
                 )}
                 {s.steps.length > 0 ? (

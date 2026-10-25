@@ -7,11 +7,12 @@ import { data as p1 } from './claude-code/_data'
 import { data as p2 } from './design/_data'
 import { data as p3 } from './external-github/_data'
 import { data as p4 } from './preview/_data'
-import { data as p5 } from './site-settings/_data'
-import { data as p6 } from './telegram/_data'
-import { data as p7 } from './terminal/_data'
+import { data as p5 } from './reverse-engineering/_data'
+import { data as p6 } from './site-settings/_data'
+import { data as p7 } from './telegram/_data'
+import { data as p8 } from './terminal/_data'
 
-export const PAGES: WorkspacePageData[] = [p0, p1, p2, p3, p4, p5, p6, p7]
+export const PAGES: WorkspacePageData[] = [p0, p1, p2, p3, p4, p5, p6, p7, p8]
 
 /** Each child together with its own children — see the law in the generator. */
 export const TREE: CollectionBranch[] = [
@@ -23,4 +24,5 @@ export const TREE: CollectionBranch[] = [
   { page: p5, children: [] },
   { page: p6, children: [] },
   { page: p7, children: [] },
+  { page: p8, children: [] },
 ]

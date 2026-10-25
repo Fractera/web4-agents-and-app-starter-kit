@@ -2,20 +2,23 @@
 // если мы сохраняем её отдельной версии в GitHub то ещё и версия Git которая позволяет откатиться к этой версии позже или просто найти её
 // снова»; «and pdf must have screen shots».
 // One HTML page for printing, built on the server from the quiz (`readProductQuiz`), the element's git and the screens of its references'
-// studies (556-14, `screens[].shot` of every part of a series). Screens are embedded as data URLs, so the printing browser needs no
-// network. The door `GET /api/node/product-quiz/pdf` prints this page with Chrome without a window.
+// studies. 594-6: the screens are the image files the element's agent saved in the study folder a reference names
+// (`references.products[].study` → `study/<folder>/`, REA's `capture-web-screenshot` among them); before 594 they came from the reports of
+// the element `reverse`, which is gone. Screens are embedded as data URLs, so the printing browser needs no network. The door
+// `GET /api/node/product-quiz/pdf` prints this page with Chrome without a window.
 import { execFile } from "node:child_process"
-import { existsSync, readdirSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
+import { readdir, readFile, stat } from "node:fs/promises"
 import { join } from "node:path"
 import { promisify } from "node:util"
 
-import { dataUrl as nodeDataUrl } from "@/lib/microservices/urls"
 import type { ProductQuiz } from "@/lib/web4-items/product-quiz"
 
 const run = promisify(execFile)
-const REPORTS = join(process.cwd(), "data", "services", "reverse", "reports")
-const JOB = /^[0-9a-z][0-9a-z-]{2,80}$/
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+const FOLDER = /^[0-9A-Za-z][0-9A-Za-z._-]{0,120}$/
+const IMAGE: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" }
+/** A screen larger than this is skipped: the PDF is printed in one go, and one full-page capture of a long site can be tens of MB. */
+const MAX_SCREEN_BYTES = 4 * 1024 * 1024
 
 export type QuizGit = {
   commit: string | null
@@ -55,43 +58,35 @@ export async function quizGit(dir: string, id: string): Promise<QuizGit> {
   return { commit: commit || null, date: date || null, dirty, remote, pushed }
 }
 
-export type QuizShot = { product: string; job: string; part: number; name: string; data: string }
+export type QuizShot = { product: string; folder: string; name: string; data: string }
 
-/** Screens of the references' studies: every part of the series named in `references.products[].report`, embedded as data URLs. */
-export async function quizShots(quiz: ProductQuiz, max = 24): Promise<QuizShot[]> {
-  const products = quiz.references?.products ?? []
-  const base = nodeDataUrl() ?? ""
-  const secret = process.env.DATA_SECRET || process.env.DATA_API_KEY || ""
-  if (!base || !existsSync(REPORTS)) return []
-  const jobs = readdirSync(REPORTS, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)
+/** Screens of the references' studies: the image files of each study folder a reference names (`references.products[].study`), in
+ *  name order, embedded as data URLs. `dir` is the element's folder; the folder name comes from the quiz and is checked before use. */
+export async function quizShots(quiz: ProductQuiz, dir: string, max = 24): Promise<QuizShot[]> {
   const out: QuizShot[] = []
-  for (const p of products) {
-    const series = String(p.report ?? "").trim()
-    if (!JOB.test(series)) continue
-    const parts = jobs
-      .map((job) => {
-        try {
-          const r = JSON.parse(readFileSync(join(REPORTS, job, "report.json"), "utf8")) as { series?: unknown; part?: unknown; screens?: unknown }
-          const s = typeof r.series === "string" ? r.series : job
-          return s === series ? { job, part: Number.isInteger(r.part) ? Number(r.part) : 1, screens: Array.isArray(r.screens) ? r.screens : [] } : null
-        } catch { return null }
-      })
-      .filter((x): x is { job: string; part: number; screens: unknown[] } => x !== null)
-      .sort((a, b) => a.part - b.part)
-    for (const part of parts) {
-      for (const s of part.screens as { name?: unknown; id?: unknown; shot?: { id?: unknown } }[]) {
-        if (out.length >= max) return out
-        const id = String(s?.shot?.id ?? "")
-        if (!UUID.test(id)) continue
-        try {
-          const res = await fetch(`${base}/media/${id}/file`, { headers: secret ? { "X-Data-Secret": secret } : {} })
-          if (!res.ok) continue
-          const type = res.headers.get("content-type") ?? "image/png"
-          if (!type.startsWith("image/")) continue
-          const buf = Buffer.from(await res.arrayBuffer())
-          out.push({ product: p.name || p.url || series, job: part.job, part: part.part, name: String(s?.name ?? s?.id ?? ""), data: `data:${type};base64,${buf.toString("base64")}` })
-        } catch { /* a missing screen is skipped; the others still print */ }
-      }
+  for (const p of quiz.references?.products ?? []) {
+    const folder = String(p.study ?? "").trim()
+    if (!FOLDER.test(folder) || folder.includes("..")) continue
+    const root = join(dir, "study", folder)
+    if (!existsSync(root)) continue
+    let files: { name: string; parentPath?: string; path?: string; isFile(): boolean }[] = []
+    try {
+      files = await readdir(root, { recursive: true, withFileTypes: true })
+    } catch {
+      continue
+    }
+    const images = files
+      .filter((f) => f.isFile() && IMAGE[f.name.slice(f.name.lastIndexOf(".")).toLowerCase()])
+      .map((f) => join(f.parentPath ?? f.path ?? root, f.name))
+      .sort()
+    for (const file of images) {
+      if (out.length >= max) return out
+      try {
+        if ((await stat(file)).size > MAX_SCREEN_BYTES) continue
+        const type = IMAGE[file.slice(file.lastIndexOf(".")).toLowerCase()]
+        const name = file.slice(root.length + 1).replace(/\\/g, "/")
+        out.push({ product: p.name || p.url || folder, folder, name, data: `data:${type};base64,${(await readFile(file)).toString("base64")}` })
+      } catch { /* a missing screen is skipped; the others still print */ }
     }
   }
   return out
@@ -120,7 +115,6 @@ export type QuizPdfWords = {
   decisions: string
   screens: string
   screensNote: string
-  part: string
   draft: string
   confirmed: string
 }
@@ -132,7 +126,7 @@ const WORDS: Record<"en" | "ru", QuizPdfWords> = {
     dirty: "There are unsaved edits after this commit", restore: "Return to this version", vision: "Vision", actors: "Who uses it",
     modules: "Modules", stages: "Stages", references: "Products like this one", openQuestions: "Open questions", notNow: "Not now",
     decisions: "Decisions", screens: "Screens of the studied products",
-    screensNote: "Screens of a studied product, only to understand how it works. Not for copying its design.", part: "part",
+    screensNote: "Screens of a studied product, only to understand how it works. Not for copying its design.",
     draft: "draft", confirmed: "confirmed",
   },
   ru: {
@@ -141,7 +135,7 @@ const WORDS: Record<"en" | "ru", QuizPdfWords> = {
     dirty: "После этого коммита есть несохранённые правки", restore: "Вернуться к этой версии", vision: "Замысел", actors: "Кто пользуется",
     modules: "Модули", stages: "Этапы", references: "Похожие продукты", openQuestions: "Открытые вопросы", notNow: "Не сейчас",
     decisions: "Решения", screens: "Экраны разобранных продуктов",
-    screensNote: "Экран образца, только для понимания устройства — не для копирования оформления.", part: "часть",
+    screensNote: "Экран образца, только для понимания устройства — не для копирования оформления.",
     draft: "черновик", confirmed: "подтверждено",
   },
 }
@@ -167,10 +161,10 @@ export function quizPdfHtml(args: { item: string; name: string; lang: string; qu
   const modules = quiz.modules.map((m) => `<h3>${esc(m.title)}</h3>${m.text ? `<p>${esc(m.text)}</p>` : ""}<ul>${m.items
     .map((i) => `<li><b>${esc(i.id)}</b> ${esc(i.title)} ${badge(i.status)}${i.text ? `<br><span class="muted">${esc(i.text)}</span>` : ""}</li>`).join("")}</ul>`).join("")
   const stages = quiz.stages.map((s) => `<li><b>${esc(w.stages.slice(0, -1) || "Stage")} ${s.n}. ${esc(s.name)}</b> ${badge(s.status)}<br>${esc(s.works)}${s.ready ? `<br><span class="muted">${esc(s.ready)}</span>` : ""}</li>`)
-  const refs = (quiz.references?.products ?? []).map((p) => `<li><b>${esc(p.name)}</b> ${esc(p.url)}${p.report ? ` · <code>${esc(p.report)}</code>` : ""}</li>`)
+  const refs = (quiz.references?.products ?? []).map((p) => `<li><b>${esc(p.name)}</b> ${esc(p.url)}${p.study ? ` · <code>study/${esc(p.study)}</code>` : ""}</li>`)
   const shotsBlock = shots.length
     ? `<h2 class="page">${esc(w.screens)}</h2><p class="muted">${esc(w.screensNote)}</p>${shots.map((s) =>
-        `<figure><img src="${s.data}" alt="${esc(s.name)}"><figcaption>${esc(s.product)} · ${esc(w.part)} ${s.part} · ${esc(s.name)}</figcaption></figure>`).join("")}`
+        `<figure><img src="${s.data}" alt="${esc(s.name)}"><figcaption>${esc(s.product)} · ${esc(s.name)}</figcaption></figure>`).join("")}`
     : ""
   return `<!doctype html><html lang="${esc(args.lang)}"><head><meta charset="utf-8"><title>${esc(`${name} · ${w.title}`)}</title><style>
   @page { size: A4; margin: 16mm 14mm; }

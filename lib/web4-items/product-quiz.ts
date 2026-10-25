@@ -26,8 +26,8 @@ export type QuizStage = {
   items: string[]
   status: QuizStatus
   confirmed?: { date: string; said: string }
-  /** 590-4: the person's words that the stage works. */
-  done?: { date: string; said: string }
+  /** 590-4: the person's words that the stage works. 594-5: `openObligations` — REA obligations the person accepted open, by name. */
+  done?: { date: string; said: string; openObligations: string[] }
   /** 590-4: derived on reading, never written in the quiz. */
   state: QuizStageState
   /** 590-4: derived on reading — the steps whose «Stage:» line names this stage. */
@@ -67,13 +67,19 @@ export type ProductQuiz = {
   references: QuizReferences | null
   decisions: { date: string; said: string; gist: string }[]
 }
+/** 594-4: a studied product names its study folder (`study`, a folder of the element's `study/`); a scenario names the REA
+ *  obligations it rests on (`obligations`). */
 export type QuizReferences = {
-  products: { id: string; name: string; url: string; rules: string; source: string; report: string }[]
+  products: { id: string; name: string; url: string; rules: string; source: string; study: string }[]
   areas: { id: string; name: string }[]
-  scenarios: { id: string; area: string; name: string; seenIn: string[]; stage: number | null; notNow: string }[]
+  scenarios: { id: string; area: string; name: string; seenIn: string[]; stage: number | null; notNow: string; obligations: string[] }[]
   unknowns: { id: string; text: string; question: string; decision: string }[]
 }
-export type QuizRead = { quiz: ProductQuiz | null; problems: string[] }
+/** 594-6: one obligation of REA's ledger of a study of the element (`study/<folder>/ledger.json`, written by `npm run ledger`). */
+export type QuizObligation = { id: string; title: string; status: string; required: boolean; folder: string }
+/** 594-6: the ledgers of this machine. `studies: 0` — no study here (a fresh clone, or none made yet): the obligations can't be checked. */
+export type QuizLedgers = { studies: number; ledgers: number; obligations: QuizObligation[] }
+export type QuizRead = { quiz: ProductQuiz | null; problems: string[]; ledgers: QuizLedgers }
 
 const FOLDER = join("development-docs", "product")
 const SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/
@@ -89,7 +95,7 @@ function readReferences(v: unknown): QuizReferences | null {
   if (!v || typeof v !== "object") return null
   const r = v as Record<string, unknown>
   return {
-    products: list(r.products).map((p) => ({ id: str(p.id), name: str(p.name), url: str(p.url), rules: str(p.rules), source: str(p.source), report: str(p.report) })),
+    products: list(r.products).map((p) => ({ id: str(p.id), name: str(p.name), url: str(p.url), rules: str(p.rules), source: str(p.source), study: str(p.study) })),
     areas: list(r.areas).map((a) => ({ id: str(a.id), name: str(a.name) })),
     scenarios: list(r.scenarios).map((o) => ({
       id: str(o.id),
@@ -98,9 +104,41 @@ function readReferences(v: unknown): QuizReferences | null {
       seenIn: strs(o.seenIn),
       stage: Number.isInteger(o.stage) ? (o.stage as number) : null,
       notNow: str(o.notNow),
+      obligations: strs(o.obligations),
     })),
     unknowns: list(r.unknowns).map((u) => ({ id: str(u.id), text: str(u.text), question: str(u.question), decision: str(u.decision) })),
   }
+}
+
+// 594-6: REA's ledgers of the element's studies, read as the element's guard `check:product` reads them (594-4): `study/<folder>/
+// ledger.json` is REA's own output (`normalized_result` or the bare result); a folder without one has no obligations yet. The core only
+// shows them — the guard of the element is what reconciles the quiz and the ledgers.
+function readLedgers(dir: string, problems: string[]): QuizLedgers {
+  const root = join(dir, "study")
+  if (!existsSync(root)) return { studies: 0, ledgers: 0, obligations: [] }
+  let folders: string[] = []
+  try {
+    folders = readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)
+  } catch {
+    problems.push("study/: unreadable")
+  }
+  const obligations: QuizObligation[] = []
+  let ledgers = 0
+  for (const folder of folders) {
+    const file = join(root, folder, "ledger.json")
+    if (!existsSync(file)) continue
+    const l = readJson(file)
+    const n = (l.value?.normalized_result ?? l.value) as Record<string, unknown> | null
+    if (!n || !Array.isArray(n.obligations)) {
+      problems.push(`study/${folder}/ledger.json: not a ledger of REA (npm run ledger -- ${folder})`)
+      continue
+    }
+    ledgers++
+    for (const o of list(n.obligations)) {
+      obligations.push({ id: str(o.obligation_id), title: str(o.title), status: str(o.status), required: o.required === true, folder })
+    }
+  }
+  return { studies: folders.length, ledgers, obligations }
 }
 
 function readJson(path: string): { value: Record<string, unknown> | null; error: string | null } {
@@ -227,12 +265,13 @@ function workOf(it: QuizItem): QuizWork {
 export function readProductQuiz(id: string): QuizRead {
   const dir = elementDir(id)
   const problems: string[] = []
-  if (!dir) return { quiz: null, problems }
+  const none: QuizLedgers = { studies: 0, ledgers: 0, obligations: [] }
+  if (!dir) return { quiz: null, problems, ledgers: none }
   const base = join(dir, FOLDER)
   const head = join(base, "quiz.json")
-  if (!existsSync(head)) return { quiz: null, problems }
+  if (!existsSync(head)) return { quiz: null, problems, ledgers: none }
   const top = readJson(head)
-  if (!top.value) return { quiz: null, problems: [`quiz.json: ${top.error}`] }
+  if (!top.value) return { quiz: null, problems: [`quiz.json: ${top.error}`], ledgers: none }
   const q = top.value
 
   const modules: QuizModule[] = []
@@ -274,7 +313,7 @@ export function readProductQuiz(id: string): QuizRead {
         items: strs(s.items),
         status: status(s.status),
         confirmed: c ? { date: str(c.date), said: str(c.said) } : undefined,
-        done: d ? { date: str(d.date), said: str(d.said) } : undefined,
+        done: d ? { date: str(d.date), said: str(d.said), openObligations: strs(d.openObligations) } : undefined,
         state: "later",
         steps: [],
       }
@@ -311,5 +350,5 @@ export function readProductQuiz(id: string): QuizRead {
     if (stage) addStep(stage.steps, step)
     else problems.push(`step ${step.number}: Stage ${step.stage}, which is not in the quiz`)
   }
-  return { quiz, problems }
+  return { quiz, problems, ledgers: readLedgers(dir, problems) }
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { Check, CircleHelp, FileText, Globe, ImagePlus, Plus, RefreshCw, Trash2, X } from "lucide-react"
+import { CircleHelp, FileText, FolderSearch, Globe, ImagePlus, Plus, Trash2, X } from "lucide-react"
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
@@ -14,17 +14,19 @@ import { VoiceControl } from "@/components/form/voice-control.client"
 import { TerminalDrawer } from "@/_tools/terminal-drawer/client/terminal-drawer.client"
 import type { TerminalDrawerWords, TerminalKit } from "@/_tools/terminal-drawer/types/terminal-drawer"
 
-// «СТРОИТЕЛЬСТВО → ПРОЕКТИРОВАНИЕ ПРОДУКТА → РЕВЕРС-ИНЖИНИРИНГ» (539-3; страница переделана 556-9). Одна страница ядра для каждого элемента.
+// «ПРОЕКТИРОВАНИЕ ПРОДУКТА → РЕВЕРС-ИНЖИНИРИНГ» (539-3; страница переделана 556-9 и 594-6). Одна страница ядра для каждого элемента.
 //
 // 556-9, владелец 2026-10-23: «Представь все просто в формате карточек аккордеон», «Чтобы рассказать подробнее сделай просто ? …
 // всплывающую подсказку», «Наверно нужна кнопка начать Reverse инжиниринг … берём за основу привью которые делит экран правый на две
-// части и справа появляется инструмент: терминал куда автоматически подставляется необходимый текст». Отсюда:
-// 1) карточки: «Адрес сайта» · «Страница N» (адрес, что важно — голосом тоже, скриншоты в хранилище узла) · «+ Добавить ещё страницу»;
-// 2) «Начать реверс-инжиниринг» — справа ящик с терминалом главного агента узла (`build`), задача уходит с запуском (`_tools/terminal-drawer`);
-// 3) ниже — готовые разборы. Страницы после входа — скриншоты; войти самому агент попросит в терминале (выбор владельца 2026-10-23).
-// ✗ До этого: «не петля → фраза для Telegram» — ложная посылка: терминал закрыт только на временном адресе, на своём домене он работает.
-// Всё читается при открытии страницы и по кнопкам — таймеров и опроса нет (запрет незаказанного поведения 2026-09-25). 556-13: пока
-// открыт ящик, который открыл человек, страница слушает поток «решение записано» (план согласован владельцем: «go»).
+// части и справа появляется инструмент: терминал куда автоматически подставляется необходимый текст». Отсюда карточки «Адрес сайта» ·
+// «Страница N» (адрес, что важно — голосом тоже, скриншоты в хранилище узла) · «+ Добавить ещё страницу».
+// 594-6, владелец 2026-10-25: «работать он будет как ядро, но разборы он должен хранить внутри каждого элемента так как если мы
+// запускаем Claude Code Agent из соответствующей папки все работаю он идёт внутри этой папки и чувствуют себя в ней как дома». Поэтому
+// «Начать реверс-инжиниринг» открывает справа терминал агента ЭТОГО элемента с задачей прохода разбора («Build process, study: …» —
+// мост узнаёт проход по этим словам), а ниже — разборы элемента: папки его `study/` с заметками агента и сводкой журнала обязательств
+// REA (дверь `/api/node/studies`). Решения главного агента, потока «решение записано» и карточки входа больше нет: окно входа на сайт
+// открывает сам агент элемента (`npm run study -- login <сайт>`) и говорит об этом в терминале рядом.
+// Всё читается при открытии страницы и при сворачивании ящика — таймеров и опроса нет (запрет незаказанного поведения 2026-09-25).
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? ""
 
@@ -48,7 +50,8 @@ export type ReverseEngineeringWords = {
   addPage: string
   start: string
   helpLabel: string
-  /** The task for the main agent. «{target}» and «{item}» are replaced; the pages follow it line by line. */
+  /** The task for the element's agent in its study pass. «{target}» is replaced; the pages follow it line by line. 🔒 It begins with
+   *  «Build process, study:» in every language — the bridge picks the pass by these words. */
   task: string
   taskPages: string
   /** «{n}», «{address}» are replaced. */
@@ -56,48 +59,21 @@ export type ReverseEngineeringWords = {
   taskNoAddress: string
   /** «{links}» is replaced. */
   taskShots: string
-  drawer: TerminalDrawerWords
-  /** 556-11: the drawer with the element's agent («Send to the product quiz»). */
+  /** The drawer with the element's agent. */
   drawerElement: TerminalDrawerWords
-  reports: {
+  /** 594-6: the studies of this element — its `study/` folders. */
+  studies: {
     title: string
     loading: string
     failed: string
     empty: string
-    open: string
-    openFailed: string
-    kinds: Record<string, string>
-    /** 556-11: the decision under a study and its buttons. */
-    analyze: string
-    analyzeAgain: string
-    verdictTitle: string
-    verdictPages: string
-    continueStudy: string
-    toQuiz: string
-    refresh: string
-    /** The task for the main agent. «{job}», «{target}», «{item}» are replaced. */
-    taskAnalyze: string
-    /** The task for the element's agent. «{job}», «{target}» are replaced. */
-    taskQuiz: string
-    /** 556-13: the wide «Continue the study» — the task for the main agent. «{job}», «{target}», «{item}» are replaced. */
-    taskContinue: string
-    /** Appended when the decision needs a sign-in. «{site}» is replaced. */
-    taskContinueAccount: string
-    /** The line above the wide button. «{target}», «{date}» are replaced. */
-    decisionOf: string
-    /** 556-15: the badge of a series in one row («parts 1–{n}») and the head of each part («Part {n}»). */
-    parts: string
-    partTitle: string
-    /** 556-13: the orange card «sign in to the test account». «{site}» is replaced everywhere. */
-    signIn: {
-      title: string
-      steps: string[]
-      help: string
-      open: string
-      opening: string
-      check: string
-      states: { loading: string; none: string; window: string; consent: string; done: string; failed: string }
-    }
+    /** «{files}», «{size}», «{date}» are replaced. */
+    files: string
+    bundle: string
+    noBundle: string
+    /** «{status}», «{total}», «{open}» are replaced. */
+    ledger: string
+    noLedger: string
   }
   tool: {
     title: string
@@ -110,6 +86,21 @@ export type ReverseEngineeringWords = {
     failed: string
     retry: string
   }
+}
+
+/** 594-6: one study of the element as the door `/api/node/studies` gives it — counts and the agent's notes, nothing of the studied site. */
+export type StudyRow = {
+  folder: string
+  files: number
+  bytes: number
+  /** ISO time of the newest file of the folder. */
+  changed: string | null
+  /** The first lines of the agent's `notes.md`. */
+  notes: string | null
+  /** A canonical evidence bundle exported by the agent (`bundle*.json`). */
+  bundle: boolean
+  /** REA's ledger of obligations (`ledger.json`); «unreadable» — the file is there and is not a ledger. */
+  ledger: { status: string; total: number; requiredOpen: number; verified: number } | null
 }
 
 type Shot = { id: string; url: string; name: string }
@@ -130,9 +121,9 @@ function Help({ text, label }: { text: string; label: string }) {
   )
 }
 
-/** Задача главному агенту: цель, элемент и страницы — по строке на страницу, скриншоты ссылками хранилища узла. */
-function composeTask(w: ReverseEngineeringWords, item: string, target: string, pages: PageInput[]): string {
-  const lines = [fill(w.task, { target, item })]
+/** Задача агенту элемента: цель и страницы — по строке на страницу, скриншоты ссылками хранилища узла. */
+function composeTask(w: ReverseEngineeringWords, target: string, pages: PageInput[]): string {
+  const lines = [fill(w.task, { target })]
   const filled = pages.filter((p) => p.address.trim() || p.note.trim() || p.shots.length)
   if (filled.length) {
     lines.push(w.taskPages)
@@ -268,305 +259,80 @@ function PageCard({
   )
 }
 
-// ГОТОВЫЕ РАЗБОРЫ. Элемент `reverse` между задачами выключен, отчёты отдаёт ядро (`/api/node/reverse-report`): список — при открытии
-// страницы, по «Обновить» и когда человек сворачивает ящик с терминалом; полный отчёт — при раскрытии строки.
-// 556-11 (владелец 2026-10-23: «кнопку проанализировать итог … выдаёшь мне рекомендацию … продолжить разбор или кнопка отправить в
-// продуктовый Quiz»): у разбора без решения — «Проанализировать итог» (главный агент, навык analyze-study); с решением — оно и две кнопки,
-// рекомендованная выделена, выбирает человек.
-export type Verdict = { verdict: "continue" | "quiz"; summary: string; pages: { address: string; note: string }[]; at: string; signIn?: { site: string } }
-/** 556-14: a screen of a study kept in the node storage (only its id; the file comes through the core). */
-export type ReportScreen = { name: string; id: string }
-export type ReportItem = { job: string; target: string; kind: string; summary: string; verdict: Verdict | null; series?: string; part?: number; screens?: ReportScreen[] }
-/** 556-15: the parts of one series in one row; the first study names the series and holds its decision. */
-type ReportGroup = { series: string; root: ReportItem; parts: ReportItem[] }
-
-function groupsOf(items: ReportItem[]): ReportGroup[] {
-  const by = new Map<string, ReportItem[]>()
-  for (const it of items) { const s = it.series || it.job; by.set(s, [...(by.get(s) ?? []), it]) }
-  return [...by].map(([series, list]) => {
-    const parts = [...list].sort((a, b) => (a.part ?? 1) - (b.part ?? 1))
-    return { series, root: parts.find((x) => x.job === series) ?? parts[0], parts }
-  })
-}
-
-// 556-14 (владелец 2026-10-23: «скриншоты … в наш файловое хранилище чтобы … можно было подсматривать кнопки карточки»): экраны части —
-// миниатюрами; нажатие открывает снимок целиком. Адрес строится из id, ссылке из отчёта страница не верит.
-function Shots({ screens }: { screens: ReportScreen[] }) {
-  if (!screens.length) return null
-  return (
-    <ul className="flex flex-wrap gap-2" data-rea-part-shots={screens.length}>
-      {screens.map((s) => {
-        const src = `${BASE}/api/media/${encodeURIComponent(s.id)}/file`
-        return (
-          <li key={s.id}>
-            <a href={src} target="_blank" rel="noreferrer" title={s.name} className="block">
-              {/* eslint-disable-next-line @next/next/no-img-element -- снимок из хранилища узла, размеры неизвестны заранее */}
-              <img src={src} alt={s.name} loading="lazy" className="h-24 w-36 rounded-md border border-border object-cover object-top" />
-            </a>
-          </li>
-        )
-      })}
-    </ul>
-  )
-}
-type ReportView = { markdown: string | null } | "loading" | "failed"
-type ReportActions = { onAnalyze: (it: ReportItem) => void; onContinue: (it: ReportItem) => void; onQuiz: (it: ReportItem) => void }
-
-// 556-13: the decision itself stays in its study row; what to DO with it is the wide button on top of «Finished studies».
-function VerdictBlock({ it, w, onAnalyze }: { it: ReportItem; w: ReverseEngineeringWords["reports"]; onAnalyze: (it: ReportItem) => void }) {
-  const v = it.verdict
-  if (!v) {
-    return (
-      <div>
-        <Button type="button" onClick={() => onAnalyze(it)} data-rea-analyze={it.job}>{w.analyze}</Button>
-      </div>
-    )
-  }
-  return (
-    <div className="flex flex-col gap-2 rounded-md border border-border p-3" data-rea-verdict={v.verdict}>
-      <p className="font-medium">{w.verdictTitle} · {v.at.slice(0, 10)}</p>
-      <p className="max-w-prose">{v.summary}</p>
-      {v.pages.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <p className="text-muted-foreground">{w.verdictPages}</p>
-          <ul className="list-disc space-y-0.5 pl-5">
-            {v.pages.map((p) => <li key={`${p.address}|${p.note}`}>{[p.address, p.note].filter(Boolean).join(" — ")}</li>)}
-          </ul>
-        </div>
-      )}
-      <div>
-        <Button type="button" variant="ghost" size="sm" onClick={() => onAnalyze(it)} data-rea-analyze={it.job}>{w.analyzeAgain}</Button>
-      </div>
-    </div>
-  )
-}
-
-// 556-13. Владелец 2026-10-23: «Если ты считаешь что на следующем этапе мне нужно войти в авторизацию … выйди оранжевую карточку и скажи
-// для дальнейшего углубление в проект необходимо сделать следующее … обязательно напиши в каком браузере я имею в виду e-mail».
-// Окно входа — отдельный Chrome узла на экране компьютера с узлом (дверь `/api/node/study`, шаги 556-6…556-8): человек ставит три отметки
-// согласия, вписывает сайт и входит сам; пароль узел не видит. Состояние читается при открытии карточки и по «Проверить».
-type StudyAccount = { site: string; consent: { at: string } | null; session: { at: string; valid: boolean } | null; window: { at: string; open: boolean } | null } | null
-
-function SignInCard({ site, w, helpLabel, lang, onSignedIn }: {
-  site: string
-  w: ReverseEngineeringWords["reports"]["signIn"]
-  helpLabel: string
-  lang: string
-  onSignedIn: (yes: boolean) => void
-}) {
-  const [acc, setAcc] = useState<StudyAccount | "loading" | "failed">("loading")
-  const [busy, setBusy] = useState(false)
-
-  async function read() {
-    try {
-      const r = await fetch(`${BASE}/api/node/study?site=${encodeURIComponent(site)}`, { cache: "no-store" })
-      const j = (await r.json().catch(() => null)) as { ok?: boolean; account?: StudyAccount } | null
-      if (!j?.ok) { setAcc("failed"); onSignedIn(false); return }
-      setAcc(j.account ?? null)
-      onSignedIn(Boolean(j.account?.session?.valid))
-    } catch {
-      setAcc("failed")
-      onSignedIn(false)
-    }
-  }
-  useEffect(() => {
-    void read()
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- read once per card; the card is keyed by its site
-  }, [])
-
-  async function openWindow() {
-    setBusy(true)
-    try {
-      await fetch(`${BASE}/api/node/study`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "open", site, lang }) })
-    } catch { /* the state line below says what happened */ }
-    await read()
-    setBusy(false)
-  }
-
-  const a = acc === "loading" || acc === "failed" ? null : acc
-  const done = Boolean(a?.session?.valid)
-  const state = acc === "loading" ? w.states.loading
-    : acc === "failed" ? w.states.failed
-    : done ? w.states.done
-    : a?.window?.open ? w.states.window
-    : a?.consent ? w.states.consent
-    : w.states.none
-  return (
-    <section
-      className={`flex flex-col gap-3 rounded-lg border p-4 ${done ? "border-success/50 bg-success/10" : "border-warning/50 bg-warning/10"}`}
-      data-rea-sign-in={done ? "done" : "needed"}
-    >
-      <div className="flex items-start gap-1">
-        <p className="flex-1 pt-2 text-sm font-medium text-foreground">{fill(w.title, { site })}</p>
-        <Help text={fill(w.help, { site })} label={helpLabel} />
-      </div>
-      {!done && (
-        <ol className="list-decimal space-y-1 pl-5 text-sm text-foreground">
-          {w.steps.map((s) => <li key={s}>{fill(s, { site })}</li>)}
-        </ol>
-      )}
-      <div className="flex flex-wrap items-center gap-2">
-        {!done && (
-          <Button type="button" onClick={() => void openWindow()} disabled={busy || Boolean(a?.window?.open)} data-rea-sign-in-open>
-            {busy ? w.opening : w.open}
-          </Button>
-        )}
-        <Button type="button" variant="outline" size="sm" onClick={() => void read()} data-rea-sign-in-check>{w.check}</Button>
-        <p className="inline-flex items-center gap-1.5 text-sm text-foreground" role="status" data-rea-sign-in-state>
-          {done && <Check className="size-4 text-success" aria-hidden />}
-          {state}
-        </p>
-      </div>
-    </section>
-  )
-}
-
-// 556-13. Владелец 2026-10-23: «Ответ модели должен был создать реальную кнопку … на вкладке готовые разборы большая широкая кнопка на всю
-// ширину контейнера с текстом продолжить разбор». Последнее решение агента — сверху «Готовых разборов»: «продолжить» — широкая
-// «Продолжить разбор» (с входом — ждёт его), «в квиз» — широкая «Отправить в продуктовый квиз».
-function DecisionPanel({ it, w, helpLabel, lang, onContinue, onQuiz }: {
-  it: ReportItem
-  w: ReverseEngineeringWords["reports"]
-  helpLabel: string
-  lang: string
-  onContinue: (it: ReportItem) => void
-  onQuiz: (it: ReportItem) => void
-}) {
-  const v = it.verdict as Verdict
-  const site = v.verdict === "continue" ? v.signIn?.site ?? null : null
-  const [signedIn, setSignedIn] = useState(!site)
-  const target = it.target.trim().split(/\s+/)[0] || it.job
-  return (
-    <div className="flex flex-col gap-3" data-rea-decision={v.verdict} data-rea-decision-job={it.job}>
-      <p className="text-sm text-muted-foreground">{fill(w.decisionOf, { target, date: v.at.slice(0, 10) })}</p>
-      {site && <SignInCard key={site} site={site} w={w.signIn} helpLabel={helpLabel} lang={lang} onSignedIn={setSignedIn} />}
-      {v.verdict === "continue" ? (
-        <Button type="button" size="lg" className="h-12 w-full text-base" disabled={!signedIn} onClick={() => onContinue(it)} data-rea-continue-wide={it.job}>
-          {w.continueStudy}
-        </Button>
-      ) : (
-        <Button type="button" size="lg" className="h-12 w-full text-base" onClick={() => onQuiz(it)} data-rea-to-quiz-wide={it.job}>
-          {w.toQuiz}
-        </Button>
-      )}
-    </div>
-  )
-}
-
-function Reports({ w, refresh, helpLabel, lang, onAnalyze, onContinue, onQuiz }: { w: ReverseEngineeringWords["reports"]; refresh: number; helpLabel: string; lang: string } & ReportActions) {
-  const [items, setItems] = useState<ReportItem[] | "loading" | "failed">("loading")
-  const [views, setViews] = useState<Record<string, ReportView>>({})
-  const [reload, setReload] = useState(0)
+// РАЗБОРЫ ЭТОГО ЭЛЕМЕНТА (594-6). Папки `study/` элемента — записи REA, заметки агента, журнал обязательств; дверь отдаёт только счёт,
+// размер, дату, первые строки заметок и сводку журнала — ничего из чужого сайта. Читаются при открытии страницы и при сворачивании
+// ящика с терминалом (агент мог сохранить разбор, пока ящик был открыт).
+function Studies({ item, lang, w, refresh }: { item: string; lang: string; w: ReverseEngineeringWords["studies"]; refresh: number }) {
+  const [rows, setRows] = useState<StudyRow[] | "loading" | "failed">("loading")
 
   useEffect(() => {
     void (async () => {
       try {
-        const r = await fetch(`${BASE}/api/node/reverse-report`, { cache: "no-store" })
-        const j = (await r.json().catch(() => null)) as { ok?: boolean; items?: ReportItem[] } | null
-        setItems(j?.ok ? (j.items ?? []).map((it) => ({ ...it, verdict: it.verdict ?? null })) : "failed")
+        const r = await fetch(`${BASE}/api/node/studies?item=${encodeURIComponent(item)}`, { cache: "no-store" })
+        const j = (await r.json().catch(() => null)) as { ok?: boolean; studies?: StudyRow[] } | null
+        setRows(j?.ok ? j.studies ?? [] : "failed")
       } catch {
-        setItems("failed")
+        setRows("failed")
       }
     })()
-  }, [refresh, reload])
+  }, [item, refresh])
 
-  async function open(job: string) {
-    if (!job || views[job]) return
-    setViews((v) => ({ ...v, [job]: "loading" }))
+  // Размер — словами языка страницы («128 kB», «104 МБ»): единицы даёт Intl, а не словарь.
+  const size = (bytes: number) => {
+    const mb = bytes >= 1024 * 1024
+    const value = mb ? bytes / (1024 * 1024) : Math.max(bytes / 1024, bytes ? 0.1 : 0)
     try {
-      const r = await fetch(`${BASE}/api/node/reverse-report?job=${encodeURIComponent(job)}`, { cache: "no-store" })
-      const j = (await r.json().catch(() => null)) as { ok?: boolean; markdown?: string | null } | null
-      setViews((v) => ({ ...v, [job]: j?.ok ? { markdown: j.markdown ?? null } : "failed" }))
+      return new Intl.NumberFormat(lang, { style: "unit", unit: mb ? "megabyte" : "kilobyte", unitDisplay: "short", maximumFractionDigits: 1 }).format(value)
     } catch {
-      setViews((v) => ({ ...v, [job]: "failed" }))
+      return `${value.toFixed(1)} ${mb ? "MB" : "KB"}`
     }
   }
 
   let body: ReactNode
-  if (items === "loading") body = <p className="inline-flex items-center gap-2 text-sm text-muted-foreground"><Spinner /> {w.loading}</p>
-  else if (items === "failed") body = <p className="text-sm text-destructive" role="alert">{w.failed}</p>
-  else if (!items.length) body = <p className="text-sm text-muted-foreground" data-rea-reports="empty">{w.empty}</p>
+  if (rows === "loading") body = <p className="inline-flex items-center gap-2 text-sm text-muted-foreground"><Spinner /> {w.loading}</p>
+  else if (rows === "failed") body = <p className="text-sm text-destructive" role="alert" data-rea-studies="failed">{w.failed}</p>
+  else if (!rows.length) body = <p className="text-sm text-muted-foreground" data-rea-studies="empty">{w.empty}</p>
   else {
-    // 556-15: одна строка на серию — первый разбор называет серию и держит решение, части 2…N идут под ним со своими экранами.
-    const groups = groupsOf(items)
-    const markdownOf = (job: string) => {
-      const v = views[job]
-      return v === undefined || v === "loading" ? (
-        <p className="inline-flex items-center gap-2 text-muted-foreground"><Spinner /> {w.open}</p>
-      ) : v === "failed" ? (
-        <p className="text-destructive" role="alert">{w.openFailed}</p>
-      ) : (
-        v.markdown && <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-xs leading-relaxed">{v.markdown}</pre>
-      )
-    }
     body = (
-      <Accordion
-        type="single"
-        collapsible
-        className="rounded-md border border-border px-3"
-        onValueChange={(v) => { for (const p of groups.find((g) => g.series === v)?.parts ?? []) void open(p.job) }}
-        data-rea-reports={groups.length}
-      >
-        {groups.map((g, i) => {
-          const it = g.root
-          const many = g.parts.length > 1
-          const date = /^\d{4}-\d{2}-\d{2}/.test(it.job) ? it.job.slice(0, 10) : ""
-          return (
-            <AccordionItem key={g.series} value={g.series} className={i === groups.length - 1 ? "border-b-0" : undefined} data-rea-report={it.job} data-rea-series-parts={g.parts.length}>
-              <AccordionTrigger>
-                <span className="flex min-w-0 flex-wrap items-center gap-2 text-left">
-                  <span className="break-all font-medium text-foreground">{it.target || it.job}</span>
-                  <Badge variant="secondary">{w.kinds[it.kind] ?? w.kinds.other}</Badge>
-                  {many && <Badge variant="secondary">{fill(w.parts, { n: String(g.parts[g.parts.length - 1].part ?? g.parts.length) })}</Badge>}
-                  {it.verdict && <Badge variant="outline">{it.verdict.verdict === "continue" ? w.continueStudy : w.toQuiz}</Badge>}
-                  {date && <span className="text-xs text-muted-foreground">{date}</span>}
-                </span>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="flex flex-col gap-3 text-sm text-foreground">
-                  <VerdictBlock it={it} w={w} onAnalyze={onAnalyze} />
-                  {g.parts.map((p) => (
-                    <div key={p.job} className="flex flex-col gap-2" data-rea-part={p.part ?? 1}>
-                      {many && <p className="font-medium">{fill(w.partTitle, { n: String(p.part ?? 1) })}</p>}
-                      {p.summary && <p className="max-w-prose">{p.summary}</p>}
-                      <Shots screens={p.screens ?? []} />
-                      {markdownOf(p.job)}
-                    </div>
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          )
-        })}
+      <Accordion type="multiple" className="rounded-lg border border-border px-4" data-rea-studies={rows.length}>
+        {rows.map((s, i) => (
+          <AccordionItem key={s.folder} value={s.folder} className={i === rows.length - 1 ? "border-b-0" : undefined} data-rea-study={s.folder}>
+            <AccordionTrigger>
+              <span className="flex min-w-0 flex-wrap items-center gap-2 text-left">
+                <FolderSearch className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                <span className="break-all font-medium text-foreground">{s.folder}</span>
+                {s.ledger && (
+                  <Badge variant={s.ledger.requiredOpen > 0 ? "outline" : "secondary"} data-rea-ledger-status={s.ledger.status}>
+                    {s.ledger.status}
+                  </Badge>
+                )}
+              </span>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="flex flex-col gap-2 text-sm text-foreground">
+                <p className="text-muted-foreground">
+                  {fill(w.files, { files: String(s.files), size: size(s.bytes), date: s.changed ? s.changed.slice(0, 10) : "—" })}
+                </p>
+                <p data-rea-bundle={s.bundle ? "yes" : "no"}>{s.bundle ? w.bundle : w.noBundle}</p>
+                <p data-rea-ledger={s.ledger ? `${s.ledger.total}/${s.ledger.requiredOpen}` : "none"}>
+                  {s.ledger
+                    ? fill(w.ledger, { status: s.ledger.status, total: String(s.ledger.total), open: String(s.ledger.requiredOpen) })
+                    : w.noLedger}
+                </p>
+                {s.notes && (
+                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-xs leading-relaxed" data-rea-notes>{s.notes}</pre>
+                )}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
       </Accordion>
     )
   }
 
-  // 556-13: the newest decision of all studies is the one the wide button acts on.
-  const latest = Array.isArray(items)
-    ? items.filter((it) => it.verdict).sort((a, b) => Date.parse((b.verdict as Verdict).at) - Date.parse((a.verdict as Verdict).at))[0] ?? null
-    : null
-
   return (
-    <section className="flex flex-col gap-3" data-rea-reports-section>
-      <div className="flex items-center justify-between gap-2">
-        <H2 variant="ui">{w.title}</H2>
-        <Button type="button" variant="ghost" size="sm" className="gap-1.5" onClick={() => setReload((n) => n + 1)} data-rea-reports-refresh>
-          <RefreshCw className="size-4" aria-hidden />
-          {w.refresh}
-        </Button>
-      </div>
-      {latest && (
-        <DecisionPanel
-          key={`${latest.job}|${(latest.verdict as Verdict).at}`}
-          it={latest}
-          w={w}
-          helpLabel={helpLabel}
-          lang={lang}
-          onContinue={onContinue}
-          onQuiz={onQuiz}
-        />
-      )}
+    <section className="flex flex-col gap-3" data-rea-studies-section>
+      <H2 variant="ui">{w.title}</H2>
       {body}
     </section>
   )
@@ -642,20 +408,8 @@ export function ReverseEngineering({ item, lang, words, kit }: { item: string; l
   const [target, setTarget] = useState("")
   const [pages, setPages] = useState<PageInput[]>([{ key: 1, address: "", note: "", shots: [] }])
   const [open, setOpen] = useState<string[]>(["site"])
-  const [drawer, setDrawer] = useState<{ n: number; text: string; service: string } | null>(null)
+  const [drawer, setDrawer] = useState<{ n: number; text: string } | null>(null)
   const [refresh, setRefresh] = useState(0)
-  // 556-13: пока на экране ящик, который открыл человек, страница слушает «решение записано» и перечитывает разборы — кнопка
-  // появляется без «Обновить». Ящик свёрнут — соединения нет: решение покажут открытие страницы, «Обновить» и «Свернуть».
-  const drawerOpen = drawer !== null
-  useEffect(() => {
-    if (!drawerOpen) return
-    let events: EventSource | null = null
-    try {
-      events = new EventSource(`${BASE}/api/node/reverse-report/events`)
-      events.addEventListener("verdict", () => setRefresh((n) => n + 1))
-    } catch { /* no stream: the list still reloads on Collapse and Refresh */ }
-    return () => events?.close()
-  }, [drawerOpen])
   // Ссылка на скриншот для агента — через ядро на этом компьютере (`nodeUrl` двери `/api/domain/state`): хранилище напрямую отвечает
   // 401 без ключа узла (замерено 556-9), а ядро отдаёт файл. Нет ответа — адрес этой страницы.
   const [nodeUrl, setNodeUrl] = useState<string | null>(null)
@@ -673,29 +427,11 @@ export function ReverseEngineering({ item, lang, words, kit }: { item: string; l
     setOpen((o) => [...o, `page-${key}`])
   }
 
+  // 594-6: задача уходит агенту ЭТОГО элемента — спящему первым поручением, работающему окном вставки (551-7).
   function start() {
     const value = target.trim()
     if (!value) return
-    setDrawer((d) => ({ n: (d?.n ?? 0) + 1, service: "build", text: composeTask(words, item, value, pages) }))
-  }
-
-  // 556-11: адрес разбора — первое слово цели отчёта («https://www.tinylaunch.com (the apex … )»).
-  const firstUrl = (t: string) => t.trim().split(/\s+/)[0] ?? ""
-  function analyze(it: ReportItem) {
-    setDrawer((d) => ({ n: (d?.n ?? 0) + 1, service: "build", text: fill(words.reports.taskAnalyze, { job: it.job, target: firstUrl(it.target), item }) }))
-  }
-  function toQuiz(it: ReportItem) {
-    setDrawer((d) => ({ n: (d?.n ?? 0) + 1, service: item, text: fill(words.reports.taskQuiz, { job: it.job, target: firstUrl(it.target) }) }))
-  }
-  // 556-13: широкая «Продолжить разбор» — задача главному агенту в ящике справа (с входом — в тестовой учётной записи сайта); чего не
-  // хватает, агент берёт из решения (`npm run report`). ✗ 556-11 кнопка лишь заполняла карточки — владелец: «как ты собираешься
-  // продолжать разбор если ты не собираешься заходить в страницы защищенные авторизацией».
-  function continueStudy(it: ReportItem) {
-    const v = it.verdict
-    if (!v) return
-    let text = fill(words.reports.taskContinue, { job: it.job, target: firstUrl(it.target), item })
-    if (v.signIn?.site) text += fill(words.reports.taskContinueAccount, { site: v.signIn.site })
-    setDrawer((d) => ({ n: (d?.n ?? 0) + 1, service: "build", text }))
+    setDrawer((d) => ({ n: (d?.n ?? 0) + 1, text: composeTask(words, value, pages) }))
   }
 
   return (
@@ -754,14 +490,14 @@ export function ReverseEngineering({ item, lang, words, kit }: { item: string; l
             {words.start}
           </Button>
         </div>
-        <Reports w={words.reports} refresh={refresh} helpLabel={words.helpLabel} lang={lang} onAnalyze={analyze} onContinue={continueStudy} onQuiz={toQuiz} />
+        <Studies item={item} lang={lang} w={words.studies} refresh={refresh} />
       </div>
       {drawer && (
         <TerminalDrawer
           key={drawer.n}
-          service={drawer.service}
+          service={item}
           lang={lang}
-          words={drawer.service === "build" ? words.drawer : words.drawerElement}
+          words={words.drawerElement}
           kit={kit}
           text={drawer.text}
           start

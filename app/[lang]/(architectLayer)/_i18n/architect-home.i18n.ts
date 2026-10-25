@@ -16,6 +16,8 @@
 // тех же разделов — второго списка не существует.
 //
 // 🔒 АДРЕС ДЕЙСТВИЯ — ПУТЬ ОТ КОРНЯ ЯДРА БЕЗ ЯЗЫКА И БЕЗ `/architect` (285-6): язык подставляет страница.
+// 594-6: «Используйте реверс-инжиниринг» ведёт на страницу разбора root (`/root/reverse-engineering`): прежняя `/reverse` снята вместе
+// с элементом reverse (594-2), разбор теперь ведёт агент элемента в своём проходе, а root есть на каждом узле.
 
 export type ArchitectAction = {
   title: string
@@ -54,7 +56,7 @@ const DICT: Record<string, ArchitectHomeUi> = {
         {
           title: 'Use reverse engineering',
           text: 'Take apart how popular products work, then build your own on their business ideas and technical solutions.',
-          path: '/reverse',
+          path: '/root/reverse-engineering',
           label: 'Open',
         },
       ],
@@ -98,7 +100,7 @@ const DICT: Record<string, ArchitectHomeUi> = {
         {
           title: 'Используйте реверс-инжиниринг',
           text: 'Разберите, как устроены популярные продукты, и постройте своё на их бизнес-идеях и технических решениях.',
-          path: '/reverse',
+          path: '/root/reverse-engineering',
           label: 'Открыть',
         },
       ],

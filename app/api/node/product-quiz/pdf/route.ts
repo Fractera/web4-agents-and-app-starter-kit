@@ -17,7 +17,8 @@ import { quizGit, quizPdfHtml, quizShots } from "@/lib/web4-items/product-quiz-p
 
 // «СКАЧАТЬ PDF» ПРОДУКТОВОГО КВИЗА (шаг 575). Владелец 2026-10-23: «должна быть версия дата если мы сохраняем её отдельной версии в GitHub
 // то ещё и версия Git которая позволяет откатиться к этой версии позже»; «pdf must have screen shots». Страница для печати собирается из
-// квиза, git элемента и экранов разборов его образцов (`lib/web4-items/product-quiz-pdf.ts`), Chrome без окна печатает её в PDF.
+// квиза, git элемента и экранов разборов его образцов (с 594-6 — снимки из папки разбора элемента `study/<папка>/`,
+// `lib/web4-items/product-quiz-pdf.ts`), Chrome без окна печатает её в PDF.
 // 🔒 Всё асинхронно (закон 325-6: дверь не держит цикл событий); окружение Chrome собирается, а не наследуется (закон 280-6).
 // Кто вправе: архитектор/админ — квиз описывает работу на машине человека, как и дверь `/api/node/product-quiz`.
 export const dynamic = "force-dynamic"
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest) {
   const asked = req.nextUrl.searchParams.get("lang")
   const lang = asked === "ru" || asked === "en" ? asked : quiz.language === "ru" ? "ru" : "en"
   const at = new Date()
-  const [git, shots] = await Promise.all([quizGit(dir, id), quizShots(quiz)])
+  const [git, shots] = await Promise.all([quizGit(dir, id), quizShots(quiz, dir)])
   const name = address || id
   const html = quizPdfHtml({ item: id, name, lang, quiz, git, shots, at })
 

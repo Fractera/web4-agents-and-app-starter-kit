@@ -495,11 +495,12 @@ export default async function Page({ params }: { params: Promise<Params> }) {
     ? <ProductQuizIsland item={item} lang={lang} words={productQuizUi(lang)}
         task={{ ui: quizTaskUi(lang), terminalWords: agentTerminalWords(lang), dialogUi: appDialogUi(lang), keyHref: openAiKeyHref(item, lang) }} />
     : null
-  // 539-3, переделано 556-9 (владелец 2026-10-23: «Представь все просто в формате карточек аккордеон»): карточки адреса и страниц,
-  // «Начать реверс-инжиниринг» — справа терминал главного агента узла (`build`); одна страница ядра для каждого элемента.
+  // 539-3, переделано 556-9 (владелец 2026-10-23: «Представь все просто в формате карточек аккордеон») и 594-6 (владелец 2026-10-25:
+  // разборы — «внутри каждого элемента»): карточки адреса и страниц, «Начать реверс-инжиниринг» — справа терминал агента ЭТОГО элемента
+  // в проходе разбора, ниже — его `study/`; одна страница ядра для каждого элемента.
   const reverseEngineering = key === 'product-design/reverse-engineering'
     ? <ReverseEngineering item={item} lang={lang} words={reverseEngineeringUi(lang)}
-        kit={{ terminalWords: agentTerminalWords(lang), dialogUi: appDialogUi(lang), keyHref: openAiKeyHref('build', lang) }} />
+        kit={{ terminalWords: agentTerminalWords(lang), dialogUi: appDialogUi(lang), keyHref: openAiKeyHref(item, lang) }} />
     : null
   // 530-1 (владелец 2026-10-18): «Настройки → Платежи» — Web2 (ключи Stripe элемента) и Web3. 532: Web3 — кошелёк элемента: наследует
   // кошелёк узла, свой добавляется и удаляется (снова кошелёк узла) — слово владельца в `lib/web4-items/node-wallet.ts`.

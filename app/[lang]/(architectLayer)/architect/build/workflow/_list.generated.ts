@@ -6,11 +6,12 @@ import { data as p0 } from './a2a-orders/_data'
 import { data as p1 } from './a2a-work/_data'
 import { data as p2 } from './process/_data'
 import { data as p3 } from './reviews/_data'
+import { data as p4 } from './terminal/_data'
 import { PAGES as c0, TREE as t0 } from './a2a-orders/_list.generated'
 import { PAGES as c1, TREE as t1 } from './a2a-work/_list.generated'
 import { PAGES as c2, TREE as t2 } from './process/_list.generated'
 
-export const PAGES: WorkspacePageData[] = [p0, p1, p2, p3]
+export const PAGES: WorkspacePageData[] = [p0, p1, p2, p3, p4]
 
 /** Each child together with its own children — see the law in the generator. */
 export const TREE: CollectionBranch[] = [
@@ -18,4 +19,5 @@ export const TREE: CollectionBranch[] = [
   { page: p1, children: c1, branches: t1 },
   { page: p2, children: c2, branches: t2 },
   { page: p3, children: [] },
+  { page: p4, children: [] },
 ]

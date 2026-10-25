@@ -6,6 +6,7 @@ default), installed in `WEB4-ITEMS/core/root`. This section is where the archite
 | Page | Order | What it is |
 |---|---|---|
 | `preview` | 10 | the first page of the section; its content is still to be agreed with the owner |
+| `reverse-engineering` | 20 | study a site or an SDK with root's own agent in its study pass; root's studies (step 594-6) |
 | `claude-code` | 30 | Claude Code subscription (agent kit) |
 | `terminal` | 40 | the element's own agent, started in `WEB4-ITEMS/core/root` (agent kit) |
 | `telegram` | 50 | the element's Telegram bot (agent kit) |
