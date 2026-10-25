@@ -188,7 +188,12 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
   // 594-4: у прохода study — сервер MCP REA на эту сессию (`modes.mcpArgs`); перед `--settings`: `--mcp-config` забирает список значений.
   const mcp = typeof modes.mcpArgs === 'function' ? modes.mcpArgs(cwd, mode, path.join(process.cwd(), 'data', 'node', 'agent-prompts'), service, pass) : []
   if (modes.hasGroups(cwd)) args = [...args, ...mcp, '--settings', JSON.stringify(modes.modeSettings(cwd, mode, off, pass)), ...modes.promptArgs(cwd, mode, path.join(process.cwd(), 'data', 'node', 'agent-prompts'), service, pass)]
-  else if (!viaChannel) args = [...args, '--settings', JSON.stringify({ enabledPlugins: off })]
+  else {
+    // 595-4: the skills memory (skills_find) also for the main agent and an element of the old template; the soul's
+    // --append-system-prompt-file below always follows, so the list flag never eats the first task (548-13).
+    if (mcp.length) args = [...args, ...mcp]
+    if (!viaChannel) args = [...args, '--settings', JSON.stringify({ enabledPlugins: off })]
+  }
   // 591: душа узла (`lib/agent-kit/soul.md`) — в системной подсказке каждой сессии: у элемента с группами её кладёт `promptArgs`
   // первой, у остальных (главный агент, элемент старого шаблона) — здесь, одна.
   if (!modes.hasGroups(cwd) && typeof modes.soulArgs === 'function') args = [...args, ...modes.soulArgs(path.join(process.cwd(), 'data', 'node', 'agent-prompts'), service)]

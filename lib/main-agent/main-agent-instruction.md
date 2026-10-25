@@ -27,6 +27,8 @@ Nothing to list on wake: the cost of a wake must not grow with the node (owner, 
 
 ## A request comes — the order
 
+0. **A new task to plan, or your opinion asked?** First the tool `skills_find`: how other projects solved it (one look, English themes
+   and terms). Build on what fits and say what you took, in your own words.
 1. **Who does it here?** `npm run find`. Found → skill `route-to-element`: give the person that element's agent and stop.
 2. **Nobody here → the network:** `npm run lagrix -- <English words>`. Not live yet — say «в сети Lagrix подходящих элементов не найдено —
    поиск пока имитируется» (in the person's language); never pretend one was found.
