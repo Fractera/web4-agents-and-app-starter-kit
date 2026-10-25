@@ -79,6 +79,7 @@
     "main-agent:install": "node scripts/main-agent-install.mjs",
     "qa:agent": "node scripts/qa-agent-journal.mjs",
     "skills": "node scripts/skills.mjs",
+    "memory": "node scripts/memory.mjs",
     "agent:screen": "node scripts/agent-screen.mjs",
     "check:modes": "node scripts/check-modes.mjs",
     "check:boundary-hook": "node scripts/check-boundary-hook.mjs",

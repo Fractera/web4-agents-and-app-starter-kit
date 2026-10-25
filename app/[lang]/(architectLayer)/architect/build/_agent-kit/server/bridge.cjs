@@ -169,6 +169,10 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
   // (`scripts/element-isolate.mjs`) закрывает чтение вне рабочих папок, а здесь живут его заказы, журналы и вложения.
   // 🛑 `--add-dir` забирает ВСЕ следующие аргументы как папки: в конце списка он съел бы первое поручение агенту (✗ замерено
   // 2026-10-20 на erpxd: пустой ввод, журнала нет). Поэтому — первым, и за ним всегда другой флаг.
+  // 595-5: the agent's native memory lives in the node (`modes.memoryDir`: data/services/<id>/memory); creating it here also makes the
+  // service's own data folder exist, so the --add-dir below covers it and writing a memory asks nothing.
+  const memDir = typeof modes.memoryDir === 'function' ? modes.memoryDir(element) : null
+  const mem = memDir ? { autoMemoryDirectory: memDir } : {}
   const ownData = path.join(process.cwd(), 'data', 'services', element)
   if (existsSync(ownData) && !args.includes(ownData)) args = ['--add-dir', ownData, ...(args.length ? args : ['--permission-mode', 'auto'])]
   // 569-3: свои встроенные инструменты папки агента (`.claude/launch-tools.txt`, `lib/agent-kit/modes.cjs`). 🛑 `--tools` забирает СПИСОК
@@ -187,12 +191,14 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
   // 590-5: у сессии строительства — свой проход (`main` · `design` · `texts`): свои вендорные навыки, файл законов прохода, модель.
   // 594-4: у прохода study — сервер MCP REA на эту сессию (`modes.mcpArgs`); перед `--settings`: `--mcp-config` забирает список значений.
   const mcp = typeof modes.mcpArgs === 'function' ? modes.mcpArgs(cwd, mode, path.join(process.cwd(), 'data', 'node', 'agent-prompts'), service, pass) : []
-  if (modes.hasGroups(cwd)) args = [...args, ...mcp, '--settings', JSON.stringify(modes.modeSettings(cwd, mode, off, pass)), ...modes.promptArgs(cwd, mode, path.join(process.cwd(), 'data', 'node', 'agent-prompts'), service, pass)]
+  if (modes.hasGroups(cwd)) args = [...args, ...mcp, '--settings', JSON.stringify({ ...modes.modeSettings(cwd, mode, off, pass), ...mem }), ...modes.promptArgs(cwd, mode, path.join(process.cwd(), 'data', 'node', 'agent-prompts'), service, pass)]
   else {
     // 595-4: the skills memory (skills_find) also for the main agent and an element of the old template; the soul's
     // --append-system-prompt-file below always follows, so the list flag never eats the first task (548-13).
     if (mcp.length) args = [...args, ...mcp]
-    if (!viaChannel) args = [...args, '--settings', JSON.stringify({ enabledPlugins: off })]
+    // 595-5: one --settings per session; with the channel it must not turn the Telegram plugin off (548-20).
+    if (!viaChannel) args = [...args, '--settings', JSON.stringify({ enabledPlugins: off, ...mem })]
+    else if (memDir) args = [...args, '--settings', JSON.stringify(mem)]
   }
   // 591: душа узла (`lib/agent-kit/soul.md`) — в системной подсказке каждой сессии: у элемента с группами её кладёт `promptArgs`
   // первой, у остальных (главный агент, элемент старого шаблона) — здесь, одна.

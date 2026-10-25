@@ -39,6 +39,8 @@ An element without a role for this request — `npm run role -- <id> "<one sente
 
 ## Skills for the rest
 
+- The person's picture — first contact, a correction of how you speak, «запомни», «что ты обо мне знаешь», «забудь» —
+  `know-the-architect`.
 - Leading an element for the architect, its «done» wakes you — `supervise-element`.
 - An element asks how the node works («asks about the node's architecture») — `answer-element`.
 - A check the architect wants from an element; starting or closing an element's agent yourself — `ask-element`.
