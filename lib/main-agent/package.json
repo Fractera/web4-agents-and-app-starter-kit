@@ -22,6 +22,7 @@
     "web4": "node ../../scripts/element-web4.mjs",
     "site-rules": "node ../../scripts/site-rules.mjs",
     "study": "node ../../scripts/study.mjs",
-    "look": "node ../../scripts/main-agent-cli.mjs look"
+    "look": "node ../../scripts/main-agent-cli.mjs look",
+    "memory": "node ../../scripts/memory.mjs"
   }
 }
