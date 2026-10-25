@@ -120,7 +120,7 @@ function firstTaskPrompt(task, viaChannel) {
     `Start the work only after they answer yes.`
 }
 
-async function spawnAgent(service, notice = () => {}, wanted = () => true, firstPrompt = '', { answerTrust = false } = {}) {
+async function spawnAgent(service, notice = () => {}, wanted = () => true, firstPrompt = '', { answerTrust = false, pass = 'main' } = {}) {
   if (!pty) {
     notice(`[терминал недоступен: node-pty не загружен — ${ptyLoadError}]`)
     return { ok: false, reason: 'pty-unavailable' }
@@ -184,7 +184,8 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
   // 552-4: у элемента с группами навыков `--settings` несёт и группы режима (`lib/agent-kit/modes.cjs`); у остальных — как прежде.
   const off = viaChannel ? {} : { [telegram.PLUGIN]: false }
   // 552-5: системная подсказка сессии — фраза режима и, если у элемента есть `.claude/modes/<режим>.md`, законы режима (одним файлом).
-  if (modes.hasGroups(cwd)) args = [...args, '--settings', JSON.stringify(modes.modeSettings(cwd, mode, off)), ...modes.promptArgs(cwd, mode, path.join(process.cwd(), 'data', 'node', 'agent-prompts'), service)]
+  // 590-5: у сессии строительства — свой проход (`main` · `design` · `texts`): свои вендорные навыки, файл законов прохода, модель.
+  if (modes.hasGroups(cwd)) args = [...args, '--settings', JSON.stringify(modes.modeSettings(cwd, mode, off, pass)), ...modes.promptArgs(cwd, mode, path.join(process.cwd(), 'data', 'node', 'agent-prompts'), service, pass)]
   else if (!viaChannel) args = [...args, '--settings', JSON.stringify({ enabledPlugins: off })]
   // 591: душа узла (`lib/agent-kit/soul.md`) — в системной подсказке каждой сессии: у элемента с группами её кладёт `promptArgs`
   // первой, у остальных (главный агент, элемент старого шаблона) — здесь, одна.
@@ -195,8 +196,10 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
   // кириллицей доходит через node-pty байт в байт (замерено тем же днём).
   // 551-7: поручение, начатое с «-», `claude` прочёл бы флагом — пробел впереди оставляет его текстом.
   // 570: модель по роду работы (`lib/agent-kit/modes.cjs` `launchModel`) — один флаг с одним значением, до поручения.
-  const model = typeof modes.launchModel === 'function' ? modes.launchModel(cwd, mode) : null
+  const model = typeof modes.launchModel === 'function' ? modes.launchModel(cwd, mode, pass) : null
   if (model) args = [...args, '--model', model]
+  // 590-5: команда элемента `npm run pass` узнаёт проход своей сессии из окружения и не переключает сессию на тот же проход.
+  if (modes.hasGroups(cwd) && mode === 'build') env = { ...env, FRACTERA_PASS: pass }
   // 587-5 (владелец 2026-10-24): «если пользователь авторизуется в Claude Code Agent а затем придёт терминал … если есть такая запись то
   // подставить её как в техническое задание в терминал, сразу после подтверждения папки. Если же пользователь активировать Telegram …
   // сразу же отправляются это задание с текстом … запускаем его в работу?». Первое задание узла (главная root → `data/node/first-task.json`)
@@ -217,6 +220,7 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
   // 548-13: канал — это аргументы плагина Telegram, а не любые аргументы (поручение и `--add-dir` каналом не делают).
   const born = session.register({ service, pid: child.pid, proc: child, cwd, channel: viaChannel })
   born.taskUrls = new Set()
+  born.pass = pass
   // 551-7: запуск со страницы с задачей из ссылки — вопрос доверия папке отвечает мост; согласие — нажатие, которое привело сюда.
   if (answerTrust) {
     born.answerTrust = true
@@ -229,8 +233,32 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
     watchTrust(born)
     watchAsk(born)
   })
-  child.onExit(() => session.exited(born))
+  child.onExit(() => {
+    session.exited(born)
+    startQueuedPass(element)
+  })
   return { ok: true, session: born }
+}
+
+// ── ПРОХОДЫ: ОЧЕРЕДЬ ВМЕСТО УБИЙСТВА ЖИВОЙ СЕССИИ (590-5) ─────────────────────────────────────────────────────────────────────────
+// Запрос другого прохода, пока идёт сессия строительства, не убивает её: проход ждёт здесь и рождается, когда та закроется (агент
+// закрывает себя сам командой `npm run pass`, записав `current-step.md`). Таймеров нет: очередь проверяется только при выходе сессии;
+// запись старше получаса там же снимается со строкой в журнале — выход сессии на другой день не родит забытый проход.
+const queuedPass = new Map()
+const QUEUE_TTL_MS = 30 * 60 * 1000
+
+function startQueuedPass(element) {
+  const next = queuedPass.get(element)
+  if (!next) return
+  queuedPass.delete(element)
+  if (Date.now() - next.at > QUEUE_TTL_MS) {
+    console.log(`[agents/wake] ${element}: проход ${next.pass} ждал дольше получаса — снят, не рождаю`)
+    return
+  }
+  // Переключение просил человек (агент исполнил его слова) — вопроса в Telegram и вопроса доверия папке не нужно.
+  wake(element, { text: next.text, confirmed: true })
+    .then((r) => console.log(`[agents/wake] ${element}: проход ${next.pass} из очереди → ${r.ok ? (r.started ? 'started' : r.queued ? 'queued again' : 'ok') : r.reason}`))
+    .catch((err) => console.error(`[agents/wake] ${element}: проход ${next.pass} из очереди — ${err instanceof Error ? err.message : err}`))
 }
 
 // ── ВОПРОС-РАЗРЕШЕНИЕ НА ЭКРАНЕ → ЗАДАЧА A2A «ЖДЁТ ЧЕЛОВЕКА» (418-4; владелец 2026-10-07: «to do it now») ──────────────────────
@@ -364,17 +392,28 @@ async function wake(element, { text, from, about, declineUrl, confirmed, taskUrl
   // идёт в сессию своего процесса по первому слову; слова нет — строительство, и это пишется в журнал узла. Ключ сессии
   // рабочего процесса — `<id>--work`. У элемента без групп — одна сессия и текст как есть.
   let service = element
-  if (text && modes.hasGroups(serviceDir(element))) {
+  let pass = 'main'
+  const grouped = modes.hasGroups(serviceDir(element))
+  if (text && grouped) {
     const word = modes.modeOfText(text)
     if (!word) console.log(`[agents/wake] ${element}: запрос без первого слова процесса — строительство`)
     const mode = word ?? 'build'
+    // 590-5: у строительства — проход по слову («Build process, design:» · «Build process, texts:» · «Build process:»).
+    if (mode === 'build') pass = modes.passOfText(text) ?? 'main'
     text = modes.withWord(text, mode)
     service = modes.sessionKey(element, mode)
   }
+  // 590-5: слово прохода без задачи — родить сессию прохода без поручения (ноль токенов).
+  const task = text && grouped ? modes.taskOfText(text) : text
   const live = session.current(service)
   if (live) {
+    if (grouped && modes.modeOfKey(service) === 'build' && (live.pass ?? 'main') !== pass) {
+      queuedPass.set(element, { pass, text: task ? text : `${modes.PASS_WORDS[pass] ?? modes.WORDS.build}`, at: Date.now() })
+      console.log(`[agents/wake] ${element}: проход ${pass} ждёт — идёт сессия прохода ${live.pass ?? 'main'}`)
+      return { ok: true, queued: pass, running: live.pass ?? 'main' }
+    }
     rememberTasks(live, urls)
-    if (text) pasteWhenReady(live, text, { quietMs: 500 })
+    if (text && task) pasteWhenReady(live, text, { quietMs: 500 })
     return { ok: true, already: true }
   }
   // 409-3: бот элемента подключён — сначала вопрос человеку в Telegram; сессия родится по кнопке «Запустить» (`confirmed`).
@@ -383,7 +422,7 @@ async function wake(element, { text, from, about, declineUrl, confirmed, taskUrl
   const freeMb = Math.floor(os.freemem() / MB)
   const per = perSessionMb()
   if (freeMb < per) return { ok: false, reason: 'memory', freeMb, perSessionMb: per }
-  const r = await spawnAgent(service, undefined, undefined, text ? `${text}\n\n${finishRule(service)}` : '')
+  const r = await spawnAgent(service, undefined, undefined, text && task ? `${text}\n\n${finishRule(service)}` : '', { pass })
   if (!r.ok) return { ok: false, reason: r.reason }
   rememberTasks(r.session, urls)
   // 547: агент включён пробуждением; кнопка «Включить» в Telegram — согласие и на папку.
@@ -536,7 +575,9 @@ function onConnection(ws, service) {
         // 409-1: запуск — общая функция с пробуждением без браузера (`spawnAgent` выше). 551-7: задача из ссылки — первым поручением.
         // 552-4: терминал страницы — сессия строительства; задача из ссылки у элемента с группами открывается словом своего процесса.
         const first = task && modes.hasGroups(serviceDir(service)) ? modes.withWord(task, 'build') : task
-        const r = await spawnAgent(service, (line) => ws.send(`\r\n${line}\r\n`), () => ws.readyState === ws.OPEN, first, { answerTrust: Boolean(task) })
+        // 590-5: задача из ссылки со словом прохода рождает сессию этого прохода; кнопка без задачи — основной проход.
+        const pass = first && modes.hasGroups(serviceDir(service)) ? (modes.passOfText(first) ?? 'main') : 'main'
+        const r = await spawnAgent(service, (line) => ws.send(`\r\n${line}\r\n`), () => ws.readyState === ws.OPEN, first, { answerTrust: Boolean(task), pass })
         if (!r.ok) {
           fail(r.reason)
           return

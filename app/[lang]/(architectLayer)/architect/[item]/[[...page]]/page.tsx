@@ -106,9 +106,11 @@ type Params = { lang: string; item: string; page?: string[] }
 // Владелец 2026-10-06: поручение — на языке человека и его словами («сейчас ты будешь создавать описание для паспорта, используя
 // текстовый ввод пользователя; ты должен вызвать для этого навык …»); английское он стёр, не поняв, и агент построил работу вместо
 // описания. Текст кончается новой строкой: курсор встаёт под поручением, надиктованное дописывается ниже.
+// 590-5: тексты паспорта — работа прохода текстов (humanizer живёт только там): поручение открывается его словом, мост рождает сессию
+// этого прохода; живая сессия другого прохода, получив поручение вставкой, переключается сама (`npm run pass`).
 const PASSPORT_TASK: Record<'en' | 'ru', string> = {
-  en: "Now you write the description for the passport using the user's text below. Call the skill passport-description for this: only the passport texts, build nothing; show them to me before saving.\nUser's text:\n",
-  ru: "Сейчас ты будешь создавать описание для паспорта, используя текстовый ввод пользователя ниже. Ты должен вызвать для этого навык passport-description: только тексты паспорта, ничего не строй; покажи их мне до сохранения.\nТекст пользователя:\n",
+  en: "Build process, texts: now you write the description for the passport using the user's text below. Call the skill passport-description for this: only the passport texts, build nothing; show them to me before saving.\nUser's text:\n",
+  ru: "Build process, texts: сейчас ты будешь создавать описание для паспорта, используя текстовый ввод пользователя ниже. Ты должен вызвать для этого навык passport-description: только тексты паспорта, ничего не строй; покажи их мне до сохранения.\nТекст пользователя:\n",
 }
 
 // 326-3: страница дерева → вид острова комплекта агента (имя шаблона комплекта). 472: Telegram-бот — и в H2A (у элементов с флагом

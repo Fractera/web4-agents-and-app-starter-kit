@@ -88,6 +88,35 @@ for (const { name, dir } of elements) {
   for (const g of dirs(skills).filter((d) => existsSync(join(skills, d, '.claude-plugin', 'plugin.json')))) {
     if (!modes.ALL.includes(g)) problems.push(`${name}: группа ${g} не названа в lib/agent-kit/modes.cjs — с defaultEnabled она включена во всех режимах`)
   }
+  // 590-5: проходы строительства. Вендорный навык со строкой `Pass:` включён только в своих проходах и закрыт для чтения в чужих; навык
+  // без строки (элемент шаблона до 590-5) включён во всём строительстве, как прежде. Шаблон с разделом «Passes» в build.md обязан
+  // назвать проход у каждого вендорного навыка и нести файлы проходов; модель прохода текстов — sonnet.
+  const buildFile = join(dir, '.claude', 'modes', 'build.md')
+  const withPasses = existsSync(buildFile) && readFileSync(buildFile, 'utf8').includes('## Passes')
+  const vp = modes.vendoredPasses(dir)
+  for (const [v, ps] of Object.entries(vp)) if (withPasses && !ps?.length) problems.push(`${name}: вендорный навык ${v} без строки Pass: в SOURCE.md`)
+  const out = mkdtempSync(join(tmpdir(), 'check-modes-pass-'))
+  for (const pass of modes.PASSES) {
+    const s = modes.modeSettings(dir, 'build', {}, pass)
+    for (const [v, ps] of Object.entries(vp)) {
+      const isOff = s.skillOverrides?.[v] === 'off'
+      if (!ps) { if (isOff) problems.push(`${name} build/${pass}: ${v} без строки Pass: выключен — элемент старого шаблона обязан жить как прежде`); continue }
+      const own = ps.includes(pass)
+      if (own && isOff) problems.push(`${name} build/${pass}: ${v} выключен, а его Pass: называет этот проход`)
+      if (!own && !isOff) problems.push(`${name} build/${pass}: ${v} включён вне своих проходов (${ps.join(', ')})`)
+      if (!own && !(s.permissions?.deny ?? []).includes(`Read(./.claude/skills/${v}/**)`)) problems.push(`${name} build/${pass}: папка выключенного ${v} не закрыта для чтения`)
+    }
+    if (withPasses && pass !== 'main') {
+      const passFile = join(dir, '.claude', 'modes', `build-${pass}.md`)
+      if (!existsSync(passFile)) { problems.push(`${name}: нет файла прохода .claude/modes/build-${pass}.md`); continue }
+      const head = readFileSync(passFile, 'utf8').replace(/\r\n/g, '\n').split('\n')[0]
+      const prompt = readFileSync(modes.promptArgs(dir, 'build', out, `${name}-build-${pass}`, pass)[1], 'utf8')
+      if (!prompt.includes(head)) problems.push(`${name} build/${pass}: подсказка сессии не несёт законов прохода («${head}»)`)
+      if (!prompt.includes(`runs the ${pass} pass`)) problems.push(`${name} build/${pass}: фраза сессии не называет проход`)
+    }
+  }
+  rmSync(out, { recursive: true, force: true })
+  if (!existsSync(join(dir, '.claude', 'launch-model.txt')) && modes.launchModel(dir, 'build', 'texts') !== 'sonnet') problems.push(`${name}: проход текстов не на sonnet`)
 }
 
 if (!elements.length) problems.push('ни одного элемента с группами навыков — прибору нечего проверять (ожидался хотя бы template)')

@@ -22,8 +22,10 @@ import elementProps from "@/lib/web4-items/element-props.cjs"
 // процедура должна проходить через Claude Code, который вызывает навык внутри WEB4 ITEM; навык ещё не разработан». Задание
 // называет будущий навык `describe-element` (есть — агент следует ему) и кончается командой элемента `npm run describe:publish`:
 // она отдаёт паспорт в ядро той же дверью, что и кнопка «Забрать в ядро» (кнопка остаётся запасной).
+// 590-5: описание — работа прохода текстов (humanizer живёт только там, модель — Sonnet по закону 570): задание открывается его словом,
+// и мост рождает сессию этого прохода. У элемента шаблона до 590-5 слово тоже законно: проход текстов там — та же строительная сессия.
 export const TASK = [
-  "Describe this WEB4 element for the node's core.",
+  "Build process, texts: describe this WEB4 element for the node's core.",
   "Follow the skill describe-element of this folder; the passport texts are written by the skill passport-description.",
   "Write only what the code of this folder does today: name, shortDescription, longDescription, accepts and returns in OWN-SERVICE-PROPS/OWN-SERVICE-PROPS.json, and the skills of OWN-SERVICE-PROPS/A2A-CARD.json. The passport has no fields summary or provides: never add them.",
   "Run the texts through humanizer, then npm run check:passport until it is clean.",
