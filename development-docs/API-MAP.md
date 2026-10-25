@@ -61,10 +61,11 @@
 | `/api/node/element-docs` | GET | read one development document of a WEB4 ITEM | — |
 | `/api/node/element-orders` | GET | list the order summaries one WEB4 ITEM saved | — |
 | `/api/node/elements` | GET | list every element of the node with its role and power | — |
-| `/api/node/first-task` | GET, POST, DELETE | the first task of the node: written by the root home (node key), read and removed by the architect or the node | — |
+| `/api/node/first-task` | GET, POST, DELETE | keep the first task from the root home for the main agent | — |
 | `/api/node/github-backup` | GET, POST | report and create the GitHub repositories of every element | — |
 | `/api/node/machine` | GET | describe this computer: machine, memory per element, comparison with the super-node profile | — |
 | `/api/node/messenger-settings` | GET, POST | read and save an element's messenger settings in its passport | — |
+| `/api/node/needs` | GET, POST | keep the capability requests of the node elements | — |
 | `/api/node/official` | GET, POST, DELETE | read save or drop the node's official mark application draft | — |
 | `/api/node/online` | GET | ask Cloudflare whether the node's site is online right now | — |
 | `/api/node/origin` | GET | tell how far this node's fork is behind the original | — |
@@ -79,12 +80,11 @@
 | `/api/node/projects` | GET | list every WEB4 ITEM with its state and last commit | — |
 | `/api/node/rea` | GET, POST | read REA status in the core and start its one-time install | — |
 | `/api/node/reach` | GET, POST | measure and connect a service's address on the node's own domain | — |
-| `/api/node/reverse-report` | GET, POST | read finished study reports and record the agent verdict | — |
-| `/api/node/reverse-report/events` | GET | stream recorded study decisions to an open reverse engineering page | — |
 | `/api/node/review-inbox` | POST | element agent leaves a self-review finding about something outside it | — |
 | `/api/node/site-rules` | GET | check a site's robots.txt and find its terms before analysis | — |
 | `/api/node/state` | GET | report how this node is reachable and whether it is walled off | — |
 | `/api/node/stripe` | GET, POST | read which Stripe keys are set and save checked new ones | — |
+| `/api/node/studies` | GET | list an element's studies with notes and ledger counts | — |
 | `/api/node/study` | GET, POST | list test accounts for analysis, open a login window, end one | — |
 | `/api/node/study/consent` | GET, POST | the consent page of a test account login window | — |
 | `/api/node/super-node` | GET, POST | read the super node application and settings and change them | — |
