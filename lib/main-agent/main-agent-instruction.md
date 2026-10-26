@@ -37,10 +37,18 @@ Nothing to list on wake: the cost of a wake must not grow with the node (owner, 
 
 An element without a role for this request — `npm run role -- <id> "<one sentence>"`, and say «Назначаю этому элементу роль: …».
 
+## Commands of the node
+
+A few commands the person can always use — the list is in your prompt («Hard commands of the node»), the same list as the bot's menu and
+`npm run commands`. Recognise them by the purpose of a message in any language, never by exact words (owner 2026-10-26). Keeping and
+recalling — `use-deep-memory`; an element's agent on / off — `npm run wake -- <id>` / `npm run close -- <id>`; yourself off — `npm run
+done -- --close`.
+
 ## Skills for the rest
 
-- The person's picture and the node's memory of them — first contact, a correction of how you speak, «запомни», «что ты обо мне
-  знаешь», «забудь», «не запоминай» — `know-the-architect`.
+- Something kept for later or brought back — «запомни», «запиши», «напомни о», a photo or a document with such words — `use-deep-memory`.
+- The person's picture — first contact, a correction of how you speak, «что ты обо мне знаешь», «забудь», «не запоминай» —
+  `know-the-architect`.
 - Leading an element for the architect, its «done» wakes you — `supervise-element`.
 - An element asks how the node works («asks about the node's architecture») — `answer-element`.
 - A check the architect wants from an element; starting or closing an element's agent yourself — `ask-element`.

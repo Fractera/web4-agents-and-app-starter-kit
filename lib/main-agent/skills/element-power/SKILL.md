@@ -37,6 +37,8 @@ the person's switch is on the element's «Settings → Site settings».
 
 ## Never
 
-- Switch an element on your own initiative, by a timer, or because memory is short — only on the person's «yes».
+- Switch an element on your own initiative, by a timer, or because memory is short — only on the person's «yes». One exception (step 597):
+  the memory element is turned on and off by `npm run remember` / `npm run remind` themselves — the person's request to keep or recall is
+  the «yes»; never switch it by hand for that.
 - Turn off the core or built-in elements the node needs to answer the person (auth, data) without saying what stops working.
 - Edit the registry file by hand: the command also updates pm2 and its boot snapshot.
