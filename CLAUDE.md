@@ -3950,5 +3950,6 @@ choosse will is prefer».
   read only, by the request's English `terms`/`themes` from the same parsing call; found → «в базе навыков узла есть опыт других проектов:
   навык copywriting проекта coreyhaines (лицензия MIT) — …»; its chain step «реестр навыков: найдено N — <skills>». The marketplace stays a
   stub.
-- 🛑 Not built: the large base and its delivery from outside (the owner: later); forgetting a changed skill's old version; loading the base
-  by the system itself when the architect saves the OpenAI key — new system behaviour, a question to the owner (598-2).
+- 🛑 Not built: the large base and its delivery from outside (the owner: later); forgetting a changed skill's old version. 🔒 The system
+  does NOT load the base by itself when the architect saves the OpenAI key — the owner, 2026-10-26: «Не строить (Рекомендую)»; the main
+  agent loads it by the `skills_find` notice.
