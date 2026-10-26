@@ -27,6 +27,7 @@
     "commands": "node ../../scripts/node-commands.mjs commands",
     "remember": "node ../../scripts/node-commands.mjs remember",
     "remind": "node ../../scripts/node-commands.mjs remind",
-    "wake": "node ../../scripts/node-commands.mjs wake"
+    "wake": "node ../../scripts/node-commands.mjs wake",
+    "skills-base": "node ../../scripts/skills.mjs base-load"
   }
 }

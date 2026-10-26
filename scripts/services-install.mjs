@@ -1196,6 +1196,18 @@ if (!ONLY) {
   try { coreUp = (await fetch(`http://localhost:${JSON.parse(readFileSync(join(ROOT, 'logs', 'runtime.json'), 'utf8')).port ?? 24680}/api/health`, { signal: AbortSignal.timeout(5000) })).ok } catch { /* ядро не запущено */ }
   if (coreUp) await require('../lib/web4-items/catalog-notify.cjs').notifyCatalog('install', ROOT)
 }
+// 598-2: база навыков узла (lib/agent-kit/skills/base) — в общий граф один раз: только то, чего в учёте графа ещё нет. Мягкий шаг:
+// на свежей машине граф ещё не запущен и ключа OpenAI нет — строка, и базу загрузит главный агент (npm run skills-base), когда
+// skills_find скажет, что её нет в графе.
+if (!ONLY) {
+  if (!running.includes('fractera-svc-graph')) {
+    say('\n  база навыков узла: граф не был запущен — загрузится позже командой npm run skills -- base-load')
+  } else {
+    const r = spawnSync(process.execPath, [join(ROOT, 'scripts', 'skills.mjs'), 'base-load', '--wait'], { cwd: ROOT, encoding: 'utf8', windowsHide: true, timeout: 900_000 })
+    const line = String(r.stdout ?? '').split(/\r?\n/).find((l) => l.startsWith('===SKILLS_BASE')) ?? `код ${r.status}${r.error ? ` ${r.error.message}` : ''}`
+    say(`\n  база навыков узла → граф: ${line}`)
+  }
+}
 say('\n🛑 После установки узлу нужна ПЕРЕСБОРКА: npm run serve:rebuild — значения')
 say('   NEXT_PUBLIC_* запекаются в сборку, и без неё правка не применится.')
 say('===SERVICES_INSTALL_OK===')

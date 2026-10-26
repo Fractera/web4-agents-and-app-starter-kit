@@ -118,7 +118,7 @@
     {
       "id": "graph",
       "repo": "https://github.com/Fractera/fractera-graph-lightrag-starter.git",
-      "version": "v1.1.15",
+      "version": "v1.1.16",
       "provides": [
         "knowledge-graph"
       ],
