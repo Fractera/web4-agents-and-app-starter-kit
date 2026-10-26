@@ -259,4 +259,4 @@ The other repositories of the project and what they do:
 | `Fractera/fractera-custom-item-starter` | the template every new custom element is born from |
 | `Fractera/fractera-native-item-starter` | the template of native elements |
 
-Every element repository has a section like this one: what it does, whether you can change it, how, and how the change is used.
+Every element repository has a section like this one: what it does, whether you can change it, how, and how the change is used. 
