@@ -3870,7 +3870,7 @@ request, no element or template edited. A working-process session (`<id>--work`)
   element without vectors ≈ 0.05 s; a six-language check set 21 of 24 (0 noise, words 7 of 24); the owner's live check in Telegram
   (595-10) — the start, skills on the furniture example, the truck by meaning, «как работает твоя память» — worked.
 - 🛑 Not built: the commands «запомни» / «напомни о» to the deep memory (597; the element itself is built — step 596 below), the skills
-  base delivered with every clone (598). Found on the way: the main agent carries the 22 claude-in-chrome tools whole (≈ 8–9k tokens per
+  base delivered with every clone (598 — built, the section «The skills base with every clone» below). Found on the way: the main agent carries the 22 claude-in-chrome tools whole (≈ 8–9k tokens per
   request) — `ToolSearch` is not in its `--tools` (`.claude/launch-tools.txt`), and without it MCP tools load upfront (code.claude.com,
   mcp) — the owner decides.
 
@@ -3921,3 +3921,34 @@ The owner (2026-10-25): «инструкцию о всех жёстко запр
   596 every object was «not-ours»: `ownIds` read a table of the former single database).
 - 🛑 Not built: menus of elements' bots; forgetting in the deep memory; the main agent's live run by these commands — the owner's check in
   Telegram (a photo, then «запомни, это моя мама», then «покажи маму»).
+
+## The skills base with every clone (step 598, 2026-10-26)
+
+The owner (2026-10-25): «вместе с каждым новым клонам нашего проекта каждому архитектору предоставлять огромный массив навыков которые я
+хочу чтобы мы один раз загрузили в граф преобразовали как векторы и отправляли каждому пользователю … прямо сейчас прямо в этом проекте ты
+можешь положить один или два»; the plan went by his word of 2026-10-26: «all next steps go to finish non stop , not ask me , your best
+choosse will is prefer».
+- **The base** — `lib/agent-kit/skills/base/<source>/<skill>/` and `manifest.json`: eight licensed skills of other projects (humanizer,
+  impeccable, design-taste-frontend, copywriting, copy-editing, reverse-engineer-anything, google-maps-platform, stripe-best-practices;
+  MIT or Apache-2.0), each folder whole with its LICENSE, NOTICE and SOURCE.md — MIT and Apache ask for the notice in every copy; only the
+  skill's text, never its scripts. `npm run skills -- base-sync <folder> --source <name> --license <spdx> [--url --version]` adds one;
+  `base-check` (in `prebuild`) refuses a skill without a LICENSE, with a licence outside the list or with a file a base may not hold.
+- **Into this node's graph once** — `npm run skills -- base-load` (the main agent: `npm run skills-base`): the graph and the OpenAI key are
+  checked first; a ledger `data/node/skills-base.json` by the fingerprint of SKILL.md (a loaded skill is never inserted again — LightRAG
+  would merge its descriptions); a skill changed since loading is named and not inserted (the graph cannot forget the old version); an
+  emptied graph is loaded again. The vectors are counted on the node with its key — under a cent for the eight, and every query needs that
+  key anyway. The installer calls `base-load --wait` at the end of a full installation when the graph was running; on a fresh machine the
+  graph and the key come later, and `skills_find` says «N of M skills of the node's base are not in the graph yet — … npm run skills-base»:
+  the main agent runs it once (its instruction, point 0). This node: 6 inserted, the 2 of 595-3 adopted, the graph 91/94/53 →
+  1092/1176/971 (entities/links/chunks), 32 s.
+- **«Nothing close enough» is reachable** — the graph element v1.1.16 takes `threshold` per query: LightRAG's own
+  `cosine_better_than_threshold`, whose default 0.2 let anything through (a landing headline found Stripe, sourdough bread found
+  copywriting). `skills_find` asks 0.5: of 21 questions the 12 within the base found their skill (two in Russian with English terms), the 9
+  outside found nothing; 0.45 let two through, 0.55 lost two — measure again when the base grows. A fragment is one skill: its sections in
+  the graph's order, up to three skills and 3 KB; the licence from the manifest.
+- **The deep memory reads the base** (memory v2.2.0): a request no service of the node handles is looked for there — the shared graph,
+  read only, by the request's English `terms`/`themes` from the same parsing call; found → «в базе навыков узла есть опыт других проектов:
+  навык copywriting проекта coreyhaines (лицензия MIT) — …»; its chain step «реестр навыков: найдено N — <skills>». The marketplace stays a
+  stub.
+- 🛑 Not built: the large base and its delivery from outside (the owner: later); forgetting a changed skill's old version; loading the base
+  by the system itself when the architect saves the OpenAI key — new system behaviour, a question to the owner (598-2).
