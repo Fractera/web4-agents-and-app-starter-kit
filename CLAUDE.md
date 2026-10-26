@@ -3656,7 +3656,7 @@ the shell requests — «Только вход, как просил», the integ
   in `idle` with one button «Get the current state»; `GET /api/node/state` and the cards come only after the press. ✗ Measured before:
   on open the entrance fired state (2.6 s) together with the shell's requests, and the page did not answer clicks.
 - **The entrance text** (`_i18n/architect-home.i18n.ts`): three actions to start (Claude Code subscription → `/build/subscription`,
-  Telegram → `/build/telegram`, reverse engineering → `/reverse`) and the basics — node, element, native, custom, one owner («Single
+  Telegram → `/build/telegram`, reverse engineering → `/root/reverse-engineering` since 594-6) and the basics — node, element, native, custom, one owner («Single
   project»), site factory («App factory»), integrator (an idea, linked to Lagrix document 19), Web4 ready. The old eight topics are in git.
 - 🛑 **Not changed (owner's choice):** the shell still asks `/api/node/online` (4–4.6 s), `/api/node/github-backup` (2 s) and
   `/api/node/attention` (1.7–2 s) on every architect page.
@@ -3953,3 +3953,34 @@ choosse will is prefer».
 - 🛑 Not built: the large base and its delivery from outside (the owner: later); forgetting a changed skill's old version. 🔒 The system
   does NOT load the base by itself when the architect saves the OpenAI key — the owner, 2026-10-26: «Не строить (Рекомендую)»; the main
   agent loads it by the `skills_find` notice.
+
+## The first-contact page: hints for the glossary words, deep memory and a curious soul, continuous evolution (step 599, 2026-10-26)
+
+The owner (2026-10-26): «добавить тултип и подсветить подсказки элемент, узел и так далее , все что у нас есть в глоссари … так как эта
+страница первого контакта и при это много новых слов» — and below it a section on the deep memory and the curious soul with a card for the
+OpenAI key and why the Anthropic subscription cannot replace it, then continuous evolution; his choices: «Только построенное (Рекомендую)»
+(no MCP-by-review, no self-started evolution on the page), «Ссылка в редактор (Рекомендую)» (the key card links to the editor).
+- **A hint is a third inline token** — `{{form|word|definition}}` in `lib/content/blocks/inline.tsx` renders the island
+  `components/content-page/term-hint.client.tsx` (shadcn Tooltip): the word dotted-underlined, hover opens the definition on a computer, a tap
+  opens and a second tap closes it on a phone. 🛑 Radix closes an open tooltip on pointerdown before the click, so a tap decides by the state
+  AT pointerdown — otherwise the second tap reopens it. The token works in every block; the markdown copy, a table's search and the FAQ JSON-LD
+  get only the form (`termPlain`), and so does a heading's anchor.
+- **A label, one source** (`lib/content/blocks/term.ts`): a dictionary writes `[[form|key]]`; the page resolves it with the definition of
+  the same language's glossary (`resolveTermLabels`); labels inside a definition become plain words in the hint (`labelsToForms`).
+- **The entrance's Basics is the glossary** (`architect-home.i18n.ts`): entries `{ key, word, aside?, text, more? }`, 19 words (architect,
+  main agent, Passport, skill, skills base, basic memory, deep memory, «review», reverse engineering added). The `docref` title goes through
+  the inline parser too. **In Russian «глубокая», not «глубинная» память** — the project's word (GLOSSARY 596); the review command is written in quotes,
+  reverse engineering is defined without the word «разбор».
+- **Two sections with their tabs:** «Deep memory and a curious soul» (`#memory`: how to use remember/remind, what the memory does with each
+  kind of file, why an OpenAI key — Anthropic offers no embedding model (platform.claude.com/docs/en/build-with-claude/embeddings) and the
+  Claude API takes no audio (…/libraries/openai-sdk), the card «Add your OpenAI key» → `/build/environment#OPENAI_API_KEY`, the skills
+  base) and «Continuous evolution» (`#evolution`: only what is built — the basic memory of the architect, «review» with up to three skill
+  changes after a yes, the capability request). Both went through the `humanizer` skill.
+- **Guard** `npm run check:term-hints` (in `prebuild`): a label whose key is not in the glossary of its language, a key in one language only,
+  a definition with `{ } | [ ] **`, a «more» not shaped `[label](address)`, a label in a file that does not resolve it. A new page with hints
+  joins its `DICTS` list. 🛑 Not marked yet: the other core pages (the token works there, nobody writes labels).
+- 🛑 **The core did not build since 597-4, and nobody knew:** the agent kit's `telegram.cjs` (a door imports it) required
+  `lib/agent-kit/commands.cjs` by a path from the working folder — Turbopack: «server relative imports are not implemented yet», 26
+  errors; kit changes were brought up by `pm2 restart` only. Now `lib/agent-kit/mount.cjs` puts the module on
+  `globalThis.__web4NodeCommands`, and `check:agent-kits` (in `prebuild`) walks from the doors' imports through `require('./…')` and
+  refuses a require of a computed path (core 43fc35b). After a kit change brought up by a restart — `npm run prebuild` all the same.

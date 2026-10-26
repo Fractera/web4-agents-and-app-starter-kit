@@ -158,6 +158,12 @@ only folders.
 its own themes (`_i18n/architect-home.i18n.ts`) and gives the workspace a top row
 of anchors INTO ITSELF — never a copy of the left menu.
 
+Step 599: its «Basics» is the glossary of the page — entries with a `key`. A word in
+any text of the page is written `[[form|key]]`; the page turns it into a hint with
+the definition from the glossary (`lib/content/blocks/term.ts`), and
+`npm run check:term-hints` fails the build on a key the glossary does not have.
+Sections: Start · Basics · Memory (`#memory`) · Evolution (`#evolution`).
+
 ## 4. Rebuild procedure, if the pages are gone
 
 1. `node lib/parser-fs.mjs` — stale nested lists are deleted, the root list drops
