@@ -3839,3 +3839,37 @@ The owner's words (2026-10-25): «Инженеры создатели REA сде
 - 🛑 Not built / not proven: a live study by an element's agent (step 593, only by the owner's word with its price); closing an
   obligation by REA's proof; the native template's `check-product` still checks copies of old reports (`product/reverse/<task>`) —
   native elements have no study pass (the owner decides whether they need one).
+
+## The node's personality: the soul, the memory, others' expertise (step 595, 2026-10-25/26)
+
+The owner (step 595): «своди одну задачу создание из агента для того чтобы ты стал реальной личностью с памятью и душой» and «душа,
+память, чужая экспертиза (хранилище навыков этой неотъемлемой часть того задания которые мы делаем сейчас». Everything arrives through
+the bridge (`lib/agent-kit/modes.cjs`): every session the architect talks to — the main agent and build sessions — has it from the first
+request, no element or template edited. A working-process session (`<id>--work`) has none of the architect's memory.
+- **The soul** — `lib/agent-kit/soul.md`, first in every session's prompt (591, temperament 595-2). **The memory's description** —
+  `lib/agent-kit/memory/memory.md` (three parts: base, curious, deep-not-built), after the soul and the session's phrase, memory sessions only.
+- **Others' expertise** — skills of other projects in the graph element (`skill:<source>:<skill>`), `npm run skills -- add|find`; the MCP
+  server `lib/agent-kit/skills/mcp.mjs` gives the tool `skills_find` (595-3, 595-4).
+- **The picture of the person** — the native memory of Claude Code in the node: `autoMemoryDirectory` = `data/services/<id>/memory`
+  (the main agent's id is build); kept by the main agent's skill `know-the-architect` (595-5).
+- **The diary** — `lib/agent-kit/memory/record.cjs`, Stop and SessionEnd hooks (shell form: only it survives the bridge killing an idle
+  session's pty; SessionEnd `timeout: 10`): every word of the person and the agents into `data/node/memory/episodes/<YYYY-MM>.jsonl`,
+  without a model; `claude -p` sessions are skipped (595-6).
+- **The first second** — `brief.cjs`, SessionStart (`startup`, exec form): the main agent gets its last exchange with the person and its
+  note «where I stopped» (`npm run done -- --note`, `data/node/memory/notes.jsonl`); an element gets the main agent's picture and its own
+  last exchange (595-7).
+- **Associations** — `recall.cjs`, UserPromptSubmit (exec form): before a person's message up to three lines of the past. By meaning
+  first: `embed.cjs` counts vectors with the core's OpenAI key in the vector element's model and size (`text-embedding-3-large`, 3072;
+  the element has no key of its own) and keeps them in the vector element, collection `memory-<agent>`; threshold 0.40 (the owner's
+  «Оставить 0,40»); the words (a Snowball stemmer, 595-8) only when no vector can answer. The Stop hook stores the new lines' vectors;
+  `npm run memory -- vectors` adds missing ones (595-8б).
+- **The person controls it** — `npm run memory -- show | forget --day <YYYY-MM-DD> | forget --all | off | on` (the main agent runs them
+  on the person's words, `know-the-architect`): forget deletes the vectors too; with memory off the diary hook moves its mark and writes
+  nothing, so «on» never brings that time back (595-9).
+- Measured: the main agent's steady request ≈ +2.5k tokens (≈ 32–34k → 34.5–37k); the search by meaning ≈ 2 s before a message, an
+  element without vectors ≈ 0.05 s; a six-language check set 21 of 24 (0 noise, words 7 of 24); the owner's live check in Telegram
+  (595-10) — the start, skills on the furniture example, the truck by meaning, «как работает твоя память» — worked.
+- 🛑 Not built: the deep memory on «запомни» / «напомни о» (an element on `fractera-memory-starter`, steps 596–597), the skills base
+  delivered with every clone (598). Found on the way: the main agent carries the 22 claude-in-chrome tools whole (≈ 8–9k tokens per
+  request) — `ToolSearch` is not in its `--tools` (`.claude/launch-tools.txt`), and without it MCP tools load upfront (code.claude.com,
+  mcp) — the owner decides.

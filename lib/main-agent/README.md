@@ -22,6 +22,14 @@ instruction and its three skills load, and the node's `CLAUDE.md` is excluded by
 Every command is `scripts/main-agent-cli.mjs` of the node. Supervision lives in `lib/web4-items/supervision.cjs` and
 `data/node/supervision.json`; roles in `WEB4-ITEMS-REGISTRY/roles.json` (services) and `data/node/roles.json` (assigned).
 
+## Memory (node step 595)
+
+The main agent's session gets the node's memory through the bridge (`lib/agent-kit/modes.cjs`, the core's `CLAUDE.md`, step 595): the
+description of its memory after the soul in its prompt, its native memory in `data/services/build/memory` (the picture of the person,
+skill `know-the-architect`), its last exchange and note at the start, up to three lines of the past found by meaning before each
+message, and the tool `skills_find`. Its commands: `npm run done -- --note "<where you stopped>"` (the next session starts with it) and
+`npm run memory -- show | forget --day <YYYY-MM-DD> | forget --all | off | on | vectors` on the person's words.
+
 ## Install and update
 
 `npm run main-agent:install` in the node's root — copies these files, makes the folder its own repository, writes
