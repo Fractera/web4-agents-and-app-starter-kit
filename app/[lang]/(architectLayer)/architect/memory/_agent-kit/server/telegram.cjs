@@ -274,20 +274,38 @@ async function idleTick(service) {
       // Чужим узел не отвечает: список допущенных — единственная граница бота.
       continue
     }
+    // 597-4: the main agent's bot gets the node's menu in this person's chat at the moment of the link (scope chat stands above the
+    // plugin's own menu).
+    if (activated && service === 'build') {
+      try { await nodeCommands().applyMenu(token, [sender], personLang(service)) } catch { /* the menu is a convenience — `npm run commands -- menu` sets it again */ }
+    }
     // 409-4 (владелец 2026-10-05: агент просыпается «и на сообщение в Telegram», с подтверждением до старта): текст
     // допущенного при выключенном терминале — не «терминал не активен», а тот же вопрос с кнопками; после «Запустить» агент
-    // получает это сообщение. Команды (`/…`), не текст и неподключённая подписка — прежнее сообщение о состоянии.
-    const said = typeof msg.text === 'string' ? msg.text.trim() : ''
-    if (!activated && said && !said.startsWith('/') && (await claudeSignedIn()) !== false) {
+    // получает это сообщение. 597-4: с вещью и подписью; команды узла — по `idleDecision`; прочие «/…» и неподключённая
+    // подписка — прежнее сообщение о состоянии.
+    const d = activated ? { do: 'status' } : idleDecision(msg)
+    if (d.do === 'list') {
+      await tg(token, 'sendMessage', { chat_id: msg.chat.id, text: await commandsText(service), disable_web_page_preview: true })
+      continue
+    }
+    if (d.do !== 'status' && (await claudeSignedIn()) !== false) {
+      const t = await askTable(service)
+      const a = shortName(named(service))
       // Владелец 2026-10-06: «выключи» выключенному агенту — не повод его включать; ответ «уже выключен».
-      if (OFF_WORDS.test(said)) {
-        const t = await askTable(service)
-        const a = shortName(named(service))
+      if (d.do === 'already-off') {
         await tg(token, 'sendMessage', { chat_id: msg.chat.id, text: (t.alreadyOff ?? ASK.en.alreadyOff)(a) })
         continue
       }
+      // 597-4: «включить» — само согласие человека: агент стартует без поручения (ноль токенов), вопроса с кнопками нет.
+      if (d.do === 'start') {
+        const out = typeof starter === 'function' ? await starter(service, {}) : { ok: false, reason: 'no-starter' }
+        const said = out.ok ? (t.onNow ?? ASK.en.onNow)(a) : out.reason === 'memory' ? t.memory(a, out.freeMb, out.perSessionMb) : t.failed(a, String(out.reason ?? 'unknown'))
+        await tg(token, 'sendMessage', { chat_id: msg.chat.id, text: said, disable_web_page_preview: true })
+        continue
+      }
       const who = [msg.from.first_name, msg.from.last_name].filter(Boolean).join(' ') || msg.from.username || sender
-      await askToStart(service, { text: humanPrompt(service, msg.chat.id, who, said), from: who, about: said, kind: 'human' })
+      const said = d.text || `(${d.thing?.label ?? 'сообщение'})`
+      await askToStart(service, { text: humanPrompt(service, msg.chat.id, who, said, d.thing), from: who, about: said, kind: 'human' })
       continue
     }
     if (answered.has(msg.chat.id)) continue
@@ -426,6 +444,8 @@ const ASK = {
     alreadyOff: (a) => `Agent ${a} is already off.`,
     trustLine: 'Its folder is not trusted in Claude Code yet — «Turn on» trusts it as well.',
     waitingTerminal: (a, link) => `Agent ${a} is waiting for your answer in the terminal: ${link}`,
+    // 597-4: «turn on» typed to a sleeping agent's bot — the agent starts with no task.
+    onNow: (a) => `Agent ${a} is on — write to it.`,
   },
   ru: {
     oneCall: (a, c) => `Агенту ${a} пришёл вопрос от агента ${c}`,
@@ -448,6 +468,7 @@ const ASK = {
     alreadyOff: (a) => `Агент ${a} уже выключен.`,
     trustLine: 'Его папка ещё не подтверждена в Claude Code — «Включить» подтвердит и её.',
     waitingTerminal: (a, link) => `Агент ${a} ждёт вашего ответа в терминале: ${link}`,
+    onNow: (a) => `Агент ${a} включён — пишите ему.`,
   },
 }
 
@@ -466,9 +487,57 @@ function knowYourself(service) {
   return 'Сначала узнай себя: npm run passport -- me (навык own-service-props-detection; вывод читай целиком, не режь head; блок node — где ты живёшь). Соседа ищи только по нужде: npm run a2a -- find <английские слова>. Как отвечать человеку — навык telegram-channel. '
 }
 
-/** 409-4: что вставить агенту из сообщения человека — кто, откуда и как ответить (инструмент reply канала Telegram). */
-function humanPrompt(service, chatId, who, said) {
-  return `${knowYourself(service)}Сообщение из Telegram от ${who} (chat_id ${chatId}), пока ты был выключен: ${said} — ответь ему в Telegram инструментом reply канала (chat_id ${chatId}).`
+/**
+ * 409-4: что вставить агенту из сообщения человека — кто, откуда и как ответить (инструмент reply канала Telegram).
+ * 597-4: вещь сообщения (фото, документ, голос…) едет номером файла — агент скачает её инструментом канала. ✗ До 597-4 спящий бот на фото
+ * отвечал справкой о состоянии, и вещь терялась: «фото, потом «запомни, это моя мама»» будило агента без фото.
+ */
+function humanPrompt(service, chatId, who, said, thing = null) {
+  const att = thing ? ` [вложение: ${thing.label}, file_id ${thing.file_id} — скачай его инструментом download_attachment канала и прочитай]` : ''
+  return `${knowYourself(service)}Сообщение из Telegram от ${who} (chat_id ${chatId}), пока ты был выключен: ${said}${att} — ответь ему в Telegram инструментом reply канала (chat_id ${chatId}).`
+}
+
+// 597-4: the node's commands (`lib/agent-kit/commands.cjs`) — read lazily: the bridge runs inside the core, and its root is `ROOT`.
+const nodeCommands = () => require(path.join(ROOT, 'lib', 'agent-kit', 'commands.cjs'))
+const THING_KINDS = [['document', 'документ'], ['voice', 'голосовое'], ['audio', 'аудио'], ['video', 'видео'], ['video_note', 'видеосообщение']]
+
+/** The thing a Telegram message carries — { kind, label, file_id } — or null. A photo — its largest size (the plugin does the same). */
+function thingOf(msg) {
+  if (Array.isArray(msg?.photo) && msg.photo.length) return { kind: 'photo', label: 'фото', file_id: msg.photo[msg.photo.length - 1].file_id }
+  for (const [k, label] of THING_KINDS) if (msg?.[k]?.file_id) return { kind: k, label, file_id: msg[k].file_id }
+  return null
+}
+
+/**
+ * 597-4: what a sleeping bot does with one message — code with no model, so only what a miss cannot hurt (owner 2026-10-26: «анализ прямого
+ * совпадения это вариант который нельзя использовать» — the agent's model reads the rest): a bare «команды» / /commands → the list; a bare
+ * «включить» / /on → the agent starts with no task; «выключи» → it is already off; a text or a thing (photo, document, voice…, with its
+ * caption) → into the question «turn on and pass?», as before — now with the thing; /start, /help, /status and other slashes → the status.
+ */
+function idleDecision(msg) {
+  const text = String(msg?.text ?? msg?.caption ?? '').trim()
+  const thing = thingOf(msg)
+  let cmds = null
+  try { cmds = nodeCommands() } catch { /* no list — the old behaviour */ }
+  if (!thing) {
+    const bare = cmds ? cmds.bareOf(text) : null
+    if (bare === 'commands') return { do: 'list' }
+    if (bare === 'on') return { do: 'start' }
+    if (bare === 'off' || OFF_WORDS.test(text)) return { do: 'already-off' }
+    // A slash command of the node's list with words («/remember …») is a message; any other slash — the status, as before.
+    if (text.startsWith('/') && !(cmds && cmds.slashOf(text))) return { do: 'status' }
+  }
+  if (text || thing) return { do: 'message', text, thing }
+  return { do: 'status' }
+}
+
+/** The list of the node's commands in the person's language (ru and en built in, any other — translated once and cached). */
+async function commandsText(service) {
+  const lang = personLang(service)
+  const cmds = nodeCommands()
+  if (['ru', 'en'].includes(lang.split('-')[0])) return cmds.humanList(lang)
+  const t = await tableFor('telegram-commands', { list: cmds.humanList('en') }, lang)
+  return t.list
 }
 
 /** «Выключи» и его родня целиком, без другого текста: выключенному агенту это не поручение, а просьба, которая уже исполнена. */
@@ -618,15 +687,17 @@ async function onButton(service, token, q) {
 // канал и закрывает свой терминал дверью ядра (`POST /api/agents/done` с `close`). Бота нет — ничего не шлётся и ничего не
 // закрывается: закрывать без ответа человека нельзя.
 
+// 597-4 (владелец 2026-10-25: «в конце каждого блока когда сейчас всплывают контейнер с предложением выключить или разобрать сделать
+// вкладку информацию которая присылают инструкцию о всех жёстко запрограммированных командах»): третья строка — «команды».
 const CLOSE = {
   en: {
-    done: (a) => `Agent ${a} has finished. Turn it off? Reply «off» — the agent will turn itself off.\nReply «review» if you first want the agent to suggest how to improve its skills.`,
-    timeout: (a) => `Agent ${a} has been on for 60 minutes. Turn it off? Reply «off» — the agent will turn itself off.\nReply «review» if you first want the agent to suggest how to improve its skills.`,
+    done: (a) => `Agent ${a} has finished. Turn it off? Reply «off» — the agent will turn itself off.\nReply «review» if you first want the agent to suggest how to improve its skills.\nReply «commands» — I will send the list of the node's commands.`,
+    timeout: (a) => `Agent ${a} has been on for 60 minutes. Turn it off? Reply «off» — the agent will turn itself off.\nReply «review» if you first want the agent to suggest how to improve its skills.\nReply «commands» — I will send the list of the node's commands.`,
   },
   ru: {
     // 410-3: «разбор» — агент перед выключением предлагает, как улучшить свои навыки (навык self-review элемента).
-    done: (a) => `Агент ${a} закончил. Выключить его? Ответьте «выключить» — агент выключится сам.\nОтветьте «разбор», если хотите, чтобы сначала агент предложил, как улучшить свои навыки.`,
-    timeout: (a) => `Агент ${a} работает уже 60 минут. Выключить его? Ответьте «выключить» — агент выключится сам.\nОтветьте «разбор», если хотите, чтобы сначала агент предложил, как улучшить свои навыки.`,
+    done: (a) => `Агент ${a} закончил. Выключить его? Ответьте «выключить» — агент выключится сам.\nОтветьте «разбор», если хотите, чтобы сначала агент предложил, как улучшить свои навыки.\nОтветьте «команды» — пришлю список команд узла.`,
+    timeout: (a) => `Агент ${a} работает уже 60 минут. Выключить его? Ответьте «выключить» — агент выключится сам.\nОтветьте «разбор», если хотите, чтобы сначала агент предложил, как улучшить свои навыки.\nОтветьте «команды» — пришлю список команд узла.`,
   },
 }
 
@@ -635,8 +706,8 @@ async function askToClose(service, why, { reviewed = false } = {}) {
   const token = storedToken(service)
   const c = await closeTable(service)
   const full = c[why === 'timeout' ? 'timeout' : 'done'](shortName(named(service)))
-  // После разбора в этой сессии — без второй строки (предложение разбора).
-  const text = reviewed ? full.split('\n')[0] : full
+  // После разбора в этой сессии — без второй строки (предложение разбора); строка «команды» (597-4) остаётся.
+  const text = reviewed ? full.split('\n').filter((_, i) => i !== 1).join('\n') : full
   let asked = 0
   for (const chat of access(service).allowed) {
     const r = await tg(token, 'sendMessage', { chat_id: chat, text, disable_web_page_preview: true })
@@ -745,4 +816,6 @@ module.exports = {
   tg, readJson, writeSecret, NODE_CODE, namedSuggestion, hasSkillGroups,
   PLUGIN, isService, stateDir, storedToken, saveToken, activationLink, saveMessages, channelLaunch,
   running, channelState, startIdlePoller, connected, askToStart, setStarter, askToClose, personLang, setPersonLang, tellWaiting,
+  // 597-4: the sleeping bot's decision — exported for the probe that checks it without a bot.
+  idleDecision, thingOf,
 }

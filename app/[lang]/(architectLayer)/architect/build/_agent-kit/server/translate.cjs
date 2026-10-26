@@ -6,6 +6,7 @@
 // списком ключа (roman `app/api/i18n/translate/route.ts`, 2026-08-11).
 
 const { existsSync, mkdirSync, readFileSync, writeFileSync } = require('node:fs')
+const { createHash } = require('node:crypto')
 const path = require('node:path')
 
 const ROOT = process.cwd()
@@ -63,15 +64,20 @@ const cacheFile = (name, lang) => path.join(ROOT, 'data', 'i18n-cache', `${name}
  */
 async function tableFor(name, en, lang) {
   const file = cacheFile(name, lang)
+  const src = {}
+  for (const [k, v] of Object.entries(en)) src[k] = typeof v === 'function' ? v('{1}', '{2}', '{3}') : v
+  // 597-4: the cache remembers WHICH English it translated — a changed text is translated again (✗ before, the old translation was
+  // served forever: the cache knew only the table's name and the language).
+  const source = createHash('sha1').update(JSON.stringify(src)).digest('hex').slice(0, 12)
   let tpl = null
   if (existsSync(file)) {
     try { tpl = JSON.parse(readFileSync(file, 'utf8')) } catch { tpl = null }
   }
+  if (tpl && tpl._source !== source) tpl = null
   if (!tpl) {
-    const src = {}
-    for (const [k, v] of Object.entries(en)) src[k] = typeof v === 'function' ? v('{1}', '{2}', '{3}') : v
     tpl = await translateMap(src, lang)
     if (!tpl) return en
+    tpl._source = source
     mkdirSync(path.dirname(file), { recursive: true })
     writeFileSync(file, JSON.stringify(tpl, null, 2))
   }
