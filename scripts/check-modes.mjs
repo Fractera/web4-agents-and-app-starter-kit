@@ -62,12 +62,13 @@ for (const { name, dir } of elements) {
       if (both.length) problems.push(`${name}: режимы ${MODES[i]} и ${MODES[j]} оба видят ${both.join(', ')}`)
     }
   }
+  // 552-7: у нативного элемента рабочего процесса нет — только `build.md`; его подсказка не несёт «Cron», а `work.md` не нужен.
+  // 596-6: и прохода разбора у него нет (594-7) — ниже флаг нужен и проходам.
+  let native = false
+  try { native = JSON.parse(readFileSync(join(dir, 'OWN-SERVICE-PROPS', 'OWN-SERVICE-PROPS.json'), 'utf8')).elementType === 'native' } catch { /* нет паспорта */ }
   // 552-5: законы режима доходят до своей сессии и только до неё — тот же вызов, что у моста, во временную папку.
   if (modes.modeFile(dir, 'build') || modes.modeFile(dir, 'work')) {
     const out = mkdtempSync(join(tmpdir(), 'check-modes-'))
-    // 552-7: у нативного элемента рабочего процесса нет — только `build.md`; его подсказка не несёт «Cron», а `work.md` не нужен.
-    let native = false
-    try { native = JSON.parse(readFileSync(join(dir, 'OWN-SERVICE-PROPS', 'OWN-SERVICE-PROPS.json'), 'utf8')).elementType === 'native' } catch { /* нет паспорта */ }
     const pairs = [['build', '## Steps', '## Cron automations'], ['work', '## Cron automations', '## Steps']]
     for (const [mode, own, foreign] of native ? pairs.slice(0, 1) : pairs) {
       // 591: файл подсказки теперь есть и без файла режима (в нём душа) — нет ли законов режима, спрашивается у самого файла режима.
@@ -106,7 +107,9 @@ for (const { name, dir } of elements) {
       if (!own && !isOff) problems.push(`${name} build/${pass}: ${v} включён вне своих проходов (${ps.join(', ')})`)
       if (!own && !(s.permissions?.deny ?? []).includes(`Read(./.claude/skills/${v}/**)`)) problems.push(`${name} build/${pass}: папка выключенного ${v} не закрыта для чтения`)
     }
-    if (withPasses && pass !== 'main') {
+    // 594-7: «У нативных элементов нет прохода разбора» (нужен ли он им — вопрос владельцу): нативный шаблон v0.1.28 несёт «## Passes»
+    // без `build-study.md`. ✗ 596-6: первый элемент узла на v0.1.28 (memory) сделал сторож красным.
+    if (withPasses && pass !== 'main' && !(native && pass === 'study')) {
       const passFile = join(dir, '.claude', 'modes', `build-${pass}.md`)
       if (!existsSync(passFile)) { problems.push(`${name}: нет файла прохода .claude/modes/build-${pass}.md`); continue }
       const head = readFileSync(passFile, 'utf8').replace(/\r\n/g, '\n').split('\n')[0]
