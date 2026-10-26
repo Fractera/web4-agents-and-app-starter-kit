@@ -144,7 +144,7 @@
     {
       "id": "memory",
       "repo": "https://github.com/Fractera/fractera-memory-starter.git",
-      "version": "v2.1.1",
+      "version": "v2.2.0",
       "port": 24690,
       "provides": [
         "memory",
