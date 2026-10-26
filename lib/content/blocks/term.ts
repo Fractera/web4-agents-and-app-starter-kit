@@ -44,3 +44,31 @@ export function termPlain(text: string): string {
 export function termLabelKeys(text: string): string[] {
   return [...text.matchAll(LABEL)].map((m) => m[2])
 }
+
+// 600-5: куски строки, внутри которых слово не размечается — готовая метка, знак, жирный (разбор строки не видит знак внутри
+// `**…**`) и ссылка `[подпись](адрес)`.
+const PROTECTED = /\[\[[^\]]*\]\]|\{\{[^{}]*\}\}|\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\)/g
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * Каждое вхождение слова ликбеза → метка `[[форма|ключ]]` (шаг 600-5: «каждый раз когда встречается слова из этого глоссария
+ * подсвечивай их»). `forms` — ключ записи ликбеза → формы слова. Длинная форма побеждает короткую («нативный элемент» раньше
+ * «элемента»); граница слова — буква или цифра Юникода, поэтому «элементарно» и «узелок» не задеваются. Готовые метки, знаки, жирный
+ * и ссылки не трогаются. Регистр формы в тексте сохраняется.
+ */
+export function labelGlossaryWords(text: string, forms: Record<string, string[]>): string {
+  const byForm = new Map<string, string>()
+  for (const [key, list] of Object.entries(forms)) for (const f of list) byForm.set(f.toLowerCase(), key)
+  if (byForm.size === 0) return text
+  const alts = [...byForm.keys()].sort((a, b) => b.length - a.length).map(escapeRe).join('|')
+  // Дефис — тоже часть слова: иначе «узлами» в «супер-узлами» нашлось бы как отдельный «узел» с чужой подсказкой.
+  const word = new RegExp(`(?<![\\p{L}\\p{N}-])(?:${alts})(?![\\p{L}\\p{N}-])`, 'giu')
+  const label = (free: string) => free.replace(word, (m) => `[[${m}|${byForm.get(m.toLowerCase())}]]`)
+  let out = ''
+  let last = 0
+  for (const m of text.matchAll(PROTECTED)) {
+    out += label(text.slice(last, m.index)) + m[0]
+    last = (m.index ?? 0) + m[0].length
+  }
+  return out + label(text.slice(last))
+}

@@ -105,6 +105,26 @@ for (const dict of DICTS) {
   }
 }
 
+// 5. Формы слов ликбеза для автопоиска (600-5): каждый ключ есть в ликбезе, форма не пуста и не рвёт метку.
+const FORMS = {
+  file: 'app/[lang]/(architectLayer)/_i18n/glossary-forms.ts',
+  name: 'GLOSSARY_FORMS',
+  dict: 'app/[lang]/(architectLayer)/_i18n/architect-home.i18n.ts',
+}
+{
+  const mod = await load(FORMS.file, 'glossary-forms')
+  const all = mod[FORMS.name]
+  const known = glossaryKeys.get(FORMS.dict) ?? new Set()
+  if (!all || typeof all !== 'object') errors.push(`${FORMS.file}: нет ${FORMS.name}`)
+  else for (const [lang, map] of Object.entries(all)) {
+    for (const [key, list] of Object.entries(map)) {
+      if (!known.has(key)) errors.push(`${FORMS.file} [${lang}] ключ «${key}» — такого слова в ликбезе нет`)
+      if (!Array.isArray(list) || list.length === 0) errors.push(`${FORMS.file} [${lang}] «${key}»: нет ни одной формы`)
+      else for (const f of list) if (typeof f !== 'string' || !f.trim() || BREAKS.test(f)) errors.push(`${FORMS.file} [${lang}] «${key}»: форма «${f}» пуста или несёт { } | [ ] **`)
+    }
+  }
+}
+
 // 4. Метки вне словарей, которые их раскрывают.
 const LABEL = /\[\[([^[\]|]+)\|([a-z0-9-]+)\]\]/g
 const OWN = new Set(DICTS.map((d) => d.file.split('/').join(sep)))
