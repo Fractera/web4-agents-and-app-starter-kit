@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import type { Block, FaqPair } from '@/lib/content/blocks/types'
+import { termPlain } from '@/lib/content/blocks/term'
 import { buildAlternates } from '@/lib/seo/alternates'
 import { translatedLanguages, isTranslated, type TranslatedPage } from '@/lib/seo/translation-state'
 import { author, authorSameAs } from '@/lib/author'
@@ -30,8 +31,9 @@ const SITE = brand().siteUrl
 // разбирает `[подпись](адрес)`), а `FAQPage` поисковик читает ДОСЛОВНО — и
 // напечатал бы квадратные скобки в выдаче. Снимаем разметку здесь, а не в
 // словах: словам ссылка нужна, поисковику — нет.
+// 599-1: подсказка к слову уезжает туда только формой слова (`termPlain`).
 function plainAnswer(text: string): string {
-  return text.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/\*\*([^*]+)\*\*/g, '$1')
+  return termPlain(text).replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/\*\*([^*]+)\*\*/g, '$1')
 }
 
 export type ContentPageContent = {

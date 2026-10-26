@@ -1,5 +1,6 @@
 import type { Block, FaqPair } from '@/lib/content/blocks/types'
 import { resolveMarkdownLinks } from '@/lib/content/blocks/links'
+import { termPlain } from '@/lib/content/blocks/term'
 
 // Блоки страницы → markdown (шаг 505, AIO).
 //
@@ -171,12 +172,15 @@ function lines(block: Block): string[] {
  * поверхность молча забыла бы его передать, и дефект вернулся бы туда же.
  */
 export function blocksToMarkdown(blocks: Block[], siteName: string): string {
+  // 599-1: подсказка к слову — не markdown; машина получает только форму слова (`termPlain`).
   return resolveMarkdownLinks(
-    blocks
-      .flatMap(b => [...lines(b), ''])
-      .join('\n')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim(),
+    termPlain(
+      blocks
+        .flatMap(b => [...lines(b), ''])
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim(),
+    ),
     siteName,
   )
 }

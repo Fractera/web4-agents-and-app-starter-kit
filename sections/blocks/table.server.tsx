@@ -1,5 +1,6 @@
 import type { SectionRenderer } from '@/sections/contract'
 import { inline } from '@/lib/content/blocks/inline'
+import { termPlain } from '@/lib/content/blocks/term'
 import { tableUi } from '@/sections/table.i18n'
 import { TableTools } from '@/components/table/table-tools.client'
 
@@ -7,9 +8,9 @@ import { TableTools } from '@/components/table/table-tools.client'
 // `components/table/table-tools.client.tsx`; здесь сервер рисует шапку и строки, островок их только
 // отбирает и листает. Рендерер остаётся серверным, как весь `sections/`.
 
-/** Текст ячейки без разметки: `**жирный**` и `[подпись](адрес)` → слова, по которым ищут. */
+/** Текст ячейки без разметки: `**жирный**`, `[подпись](адрес)` и подсказка к слову (599-1) → слова, по которым ищут. */
 function plain(s: string): string {
-  return s.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\*\*/g, '').replace(/`/g, '')
+  return termPlain(s).replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\*\*/g, '').replace(/`/g, '')
 }
 
 export const table: SectionRenderer<'table'> = (b, { key: k, lang }) => {

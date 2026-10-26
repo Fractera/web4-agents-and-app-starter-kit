@@ -3,9 +3,10 @@ import type { WorkspacePageData } from '@/lib/collection/types'
 import { ArchitectPage } from '../_lib/architect-page'
 import { collectionMetadata } from '../_lib/collection-metadata'
 import { architectLayerUi, ARCHITECT_LAYER_LANGS } from '../_i18n/architect-layer.i18n'
-import { architectHomeUi } from '../_i18n/architect-home.i18n'
+import { architectHomeUi, type BasicsTerm } from '../_i18n/architect-home.i18n'
 import { ARCHITECT_HOME } from '../_lib/architect-menu'
 import { nodeStateWidget } from '@/components/node-state/widgets'
+import { labelsToForms, resolveTermLabels } from '@/lib/content/blocks/term'
 
 // ✗ У ВХОДА В СЛОЙ НЕ БЫЛО МЕТАДАННЫХ ВОВСЕ — ИЗМЕРЕНО 2026-09-20 (256-7):
 //
@@ -82,18 +83,28 @@ export default async function Page({ params }: { params: Promise<{ lang: string 
   // не говорит человеку и рвётся при первой правке слов.
   // 582 (владелец 2026-10-24): «три популярных действия чтобы начать … И внизу сразу дай главный ликбез».
   // Действие — та же карточка со ссылкой, что у страниц главного агента (`docref`); адрес — от корня ядра (285-6).
+  //
+  // 599-1: метки `[[форма|ключ]]` в текстах становятся подсказками с определением из ликбеза того же языка — один источник слов.
+  // В подсказке метки внутри определения — простые слова: подсказка в подсказке не открывается.
+  const termWord = (t: BasicsTerm) => (t.aside ? `${t.word} (${t.aside})` : t.word)
+  const terms = Object.fromEntries(home.basics.items.map((t) => [t.key, { word: termWord(t), text: labelsToForms(t.text) }]))
+  const words = (text: string) => resolveTermLabels(text, terms)
+
   const children: Block[] = [
     { kind: 'h3', text: home.start.title, id: home.start.anchor },
     ...home.start.actions.map((a): Block => ({
       kind: 'docref',
-      title: a.title,
-      summary: a.text,
+      title: words(a.title),
+      summary: words(a.text),
       href: `/${lang}${a.path}`,
       label: a.label,
       navigate: true,
     })),
     { kind: 'h3', text: home.basics.title, id: home.basics.anchor },
-    { kind: 'list', items: home.basics.items },
+    {
+      kind: 'list',
+      items: home.basics.items.map((t) => words(`**${termWord(t)}** — ${t.text}${t.more ? ` ${t.more}` : ''}`)),
+    },
   ]
 
   const tabs: WorkspaceItem[] = [home.start, home.basics].map(t => ({ label: t.tab, href: `#${t.anchor}` }))

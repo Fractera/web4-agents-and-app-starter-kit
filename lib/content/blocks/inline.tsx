@@ -25,7 +25,8 @@ function stableHash(text: string): string {
 }
 
 export function headingId(text: string): string {
-  const clean = text.replace(/\*\*/g, '').trim()
+  // 599-1: подсказка к слову даёт адресу только форму слова — определение не меняет якорь.
+  const clean = termPlain(text.replace(/\*\*/g, '')).trim()
   const slug = clean.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60)
   // Меньше трёх знаков — это не адрес, а совпадение: два разных заголовка легко
   // дадут одинаковый огрызок. Тогда честнее метка от всего текста.
@@ -56,12 +57,18 @@ export function headingId(text: string): string {
 // настроек проекта, а не из зашитого имени платформы, и корневая ссылка
 // учитывает одноязычный режим. Кнопка `cta` пользуется тем же модулем, поэтому
 // закон один на все места, где в материале встречается адрес.
+//
+// 🔒 ТРЕТИЙ ВИД — ПОДСКАЗКА К СЛОВУ СЛОВАРЯ (599-1): знак `{{форма|слово|определение}}` становится
+// выделенным словом с определением во всплывающей подсказке. Откуда знак берётся и почему у определения
+// один источник — `./term.ts`.
 import { metaForLang } from '@/config/app-config'
+import { TermHint } from '@/components/content-page/term-hint.client'
 import { ROOT_LINK, SITE_TOKEN, linkAttrs, resolveRootHref } from './links'
+import { TERM_TOKEN_SOURCE, termPlain } from './term'
 
 export function inline(text: string, kp: string): ReactNode[] {
   const nodes: ReactNode[] = []
-  const re = /\*\*([^*]+)\*\*|\[([^\]]+)\]\(([^)]+)\)/g
+  const re = new RegExp(`\\*\\*([^*]+)\\*\\*|\\[([^\\]]+)\\]\\(([^)]+)\\)|${TERM_TOKEN_SOURCE}`, 'g')
   let last = 0
   let m: RegExpExecArray | null
   let i = 0
@@ -69,6 +76,8 @@ export function inline(text: string, kp: string): ReactNode[] {
     if (m.index > last) nodes.push(text.slice(last, m.index))
     if (m[1] !== undefined) {
       nodes.push(<strong key={`${kp}-b${i}`} className="font-semibold text-foreground">{m[1]}</strong>)
+    } else if (m[4] !== undefined) {
+      nodes.push(<TermHint key={`${kp}-t${i}`} form={m[4]} word={m[5]} text={m[6]} />)
     } else {
       const href = m[3]
 
