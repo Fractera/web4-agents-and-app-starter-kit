@@ -20,7 +20,7 @@ export function TopMenu({ lang }: { lang: string }) {
       data={data}
       // 356-1: только ядро знает, что ждёт архитектора, — открытые терминалы и готовые предпросмотры.
       surface={{ attentionUrl: `/api/node/attention?lang=${lang}`, attentionWords: ui.attention }}
-      navSlot={<AllProjects lang={lang} label={ui.allProjects} menuLabel={ui.menu} />}
+      navSlot={<AllProjects lang={lang} nativeLabel={ui.nativeElements} customLabel={ui.customElements} menuLabel={ui.menu} />}
       leftSlot={leftHas ? <DrawerToggle side="left" labels={{ open: ui.openLeft, close: ui.closeLeft }} /> : undefined}
       rightSlot={rightHas ? <DrawerToggle side="right" labels={{ open: ui.openRight, close: ui.closeRight }} /> : undefined}
     />

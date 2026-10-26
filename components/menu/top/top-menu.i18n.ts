@@ -25,15 +25,17 @@ export type TopMenuUi = {
   nostr: string
   blog: string
   /** 553: «Все проекты» в шапке страниц архитектора и пункт ящика «Группа страниц архитектора». */
-  allProjects: string
+  /** 600-3: вкладки шапки архитектора — «Нативные элементы» и «Кастомные элементы» (вместо прежней «Все проекты»). */
+  nativeElements: string
+  customElements: string
   architectGroup: string
   /** 356-1: что ждёт архитектора — в ящике «Мой аккаунт» ядра. */
   attention: { terminals: string; deployments: string; go: string; waiting: string }
 }
 
 const UI: Record<string, TopMenuUi> = {
-  en: { menu: 'Menu', allProjects: 'All projects', architectGroup: 'The architect group of pages', store: 'Store', a2a: 'A2A', nostr: 'Nostr', blog: 'Blog', openLeft: 'Open left menu', closeLeft: 'Close left menu', openRight: 'Open right menu', closeRight: 'Close right menu', attention: { terminals: 'Terminals', deployments: 'Deployments', go: 'Go', waiting: 'Waiting for you' } },
-  ru: { menu: 'Меню', allProjects: 'Все проекты', architectGroup: 'Группа страниц архитектора', store: 'Store', a2a: 'A2A', nostr: 'Nostr', blog: 'Блог', openLeft: 'Открыть левое меню', closeLeft: 'Закрыть левое меню', openRight: 'Открыть правое меню', closeRight: 'Закрыть правое меню', attention: { terminals: 'Терминалы', deployments: 'Развёртывания', go: 'Перейти', waiting: 'Ждёт вашего внимания' } },
+  en: { menu: 'Menu', nativeElements: 'Native elements', customElements: 'Custom elements', architectGroup: 'The architect group of pages', store: 'Store', a2a: 'A2A', nostr: 'Nostr', blog: 'Blog', openLeft: 'Open left menu', closeLeft: 'Close left menu', openRight: 'Open right menu', closeRight: 'Close right menu', attention: { terminals: 'Terminals', deployments: 'Deployments', go: 'Go', waiting: 'Waiting for you' } },
+  ru: { menu: 'Меню', nativeElements: 'Нативные элементы', customElements: 'Кастомные элементы', architectGroup: 'Группа страниц архитектора', store: 'Store', a2a: 'A2A', nostr: 'Nostr', blog: 'Блог', openLeft: 'Открыть левое меню', closeLeft: 'Закрыть левое меню', openRight: 'Открыть правое меню', closeRight: 'Закрыть правое меню', attention: { terminals: 'Терминалы', deployments: 'Развёртывания', go: 'Перейти', waiting: 'Ждёт вашего внимания' } },
 }
 
 export function topMenuUi(lang: string): TopMenuUi {

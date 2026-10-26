@@ -46,26 +46,6 @@ export type ArchitectHomeUi = {
   start: { anchor: string; tab: string; title: string; actions: ArchitectAction[] }
   /** Главный ликбез (582, 599-1). */
   basics: { anchor: string; tab: string; title: string; items: BasicsTerm[] }
-  /**
-   * Глубокая память и любознательная душа (599-2): как пользоваться памятью, что она делает с каждым видом файлов, зачем ключ OpenAI
-   * при подписке Claude (карточка ведёт в редактор ключей ядра — вход ничего не спрашивает сам, 582) и как агент ищет опыт других
-   * проектов в базе навыков. Факты — README элемента памяти v2.2.0, навык `use-deep-memory`, первоисточники Anthropic (итог 599-2).
-   */
-  memory: {
-    anchor: string
-    tab: string
-    title: string
-    lead: string
-    use: { title: string; items: string[] }
-    files: { title: string; items: string[] }
-    key: { title: string; text: string; card: ArchitectAction }
-    curious: { title: string; paragraphs: string[] }
-  }
-  /**
-   * Непрерывная эволюция (599-3). Только построенное — решение владельца 2026-10-26 «Только построенное (Рекомендую)»: агент закрепляет
-   * объяснение памятью и навыком («разбор», образ архитектора), недостающую возможность узел строит по «да»; чего нет — не пишется.
-   */
-  evolution: { anchor: string; tab: string; title: string; lead: string; today: { title: string; items: string[] } }
 }
 
 const DICT: Record<string, ArchitectHomeUi> = {
@@ -121,64 +101,6 @@ const DICT: Record<string, ArchitectHomeUi> = {
         { key: 'web4-ready', word: 'Web4 ready', text: 'an element on the Web4 network: agents of other nodes find it and give it orders through Lagrix. In the [[Passport|passport]] such an element carries a big star.' },
       ],
     },
-    memory: {
-      anchor: 'memory',
-      tab: 'Memory',
-      title: 'Deep memory and a curious soul',
-      lead: 'The agents of the node have two memories. [[Basic memory|basic-memory]] works on its own: the agent remembers your conversations and knows where you stopped. [[Deep memory|deep-memory]] keeps what you ask it to remember and gives it back when you ask, a month or a year later.',
-      use: {
-        title: 'How to use it',
-        items: [
-          'Write or say “remember…” to the [[main agent|main-agent]] in your own words, in Telegram or in the terminal. “Note down”, “save this” and “don’t forget” work too: the agent reads what you want in any language and does not look for an exact word.',
-          'To get it back, ask “remind me about…” or “what did I say about…”. The answer comes from both memories, with the date, the source and how sure the memory is. When it finds a thing, the agent sends you its file.',
-          'Send a photo, a document or a voice note together with words, for example “remember, this is my mom”. The memory keeps them together and finds them by meaning.',
-          'You run the basic memory with words: “show me what you remember”, “forget yesterday”, “stop remembering” and “remember again”. The deep memory cannot forget yet.',
-        ],
-      },
-      files: {
-        title: 'What the memory does with each kind of file',
-        items: [
-          'Photos and pictures are described in words and kept with the description. Ask “remind me what was on the taxi receipt” and you get the description and the picture itself.',
-          'A PDF is read whole and kept with its description, so you find it by what it says, not by its file name.',
-          'A voice note is turned into text and then read like any other phrase.',
-          'In a video the memory reads the frames and the sound when the computer has the ffmpeg program. Without it, the memory tells you it cannot read the video.',
-          'Documents and code are read as text. The memory never runs code.',
-          'A text longer than 2,000 words is kept whole, without being split into facts.',
-          'Links to web pages and YouTube are not opened on the node yet: the phrase is kept and the link stays unread.',
-        ],
-      },
-      key: {
-        title: 'Why an OpenAI key when you have a Claude subscription',
-        text: 'The agents work on your Claude subscription. The memory also needs two things Anthropic does not make. One is vectors, the numbers that let the memory search by meaning instead of matching words: Anthropic does not offer its own embedding model. The other is speech recognition: the Claude API does not take audio, so an OpenAI model turns voice notes into text. The memory also splits a phrase into facts on an inexpensive OpenAI model, which leaves your subscription quota to the agents. A usual message costs a fraction of a cent.',
-        card: {
-          title: 'Add your OpenAI key',
-          text: 'The key stays on your computer, in the core’s settings. Without it the memory cannot search by meaning, voice notes are not turned into text and the skills base stays closed.',
-          path: '/build/environment#OPENAI_API_KEY',
-          label: 'Add',
-        },
-      },
-      curious: {
-        title: 'A curious soul: what other people already know',
-        paragraphs: [
-          'The node’s agents are curious by nature. Before building something new, an agent looks at how other projects solved the same task, in the node’s [[skills base|skills-base]]. The base comes with every copy of the node: skills of other projects, each with its licence.',
-          'When it finds something close, the agent combines that experience with its own reasoning, puts it in its own words and names whose skill it was. When nothing is close, it says so instead of offering the nearest skill as a fit. The deep memory works the same way: for a request no service of the node can handle, it suggests a skill from the base.',
-        ],
-      },
-    },
-    evolution: {
-      anchor: 'evolution',
-      tab: 'Evolution',
-      title: 'Continuous evolution',
-      lead: 'At the start you get an agent that will not meet every expectation. It may see a task its own way. The cure is simple: explain what result you need or what the right solution looks like. The agent keeps it in memory or in a [[skill|skill]] and does it your way next time.',
-      today: {
-        title: 'How the agent learns today',
-        items: [
-          'It remembers you. What you tell it about yourself and how you want things done goes into the [[basic memory|basic-memory]], and every new session starts with it.',
-          'It reviews its own work. When the agent of an [[element|element]] finishes a task, it asks in Telegram whether to turn it off and offers you to reply [[“review”|review]]. The agent then reads back its session, finds where it stumbled or where you corrected it, and suggests up to three changes to its skills. It makes only the ones you said “yes” to and writes your answer down word for word, so a rejected idea is not offered again.',
-          'It builds what is missing. When an element lacks a capability, it asks the node. The [[main agent|main-agent]] looks for someone in the node who can already do it. If nobody can, it asks you, and after your “yes” it leads the building and tells the element when it is ready.',
-        ],
-      },
-    },
   },
   ru: {
     start: {
@@ -231,64 +153,6 @@ const DICT: Record<string, ArchitectHomeUi> = {
         { key: 'integrator', word: 'Интегратор', text: 'так в Lagrix называют узел, который даёт многим людям готовые элементы на своём компьютере. Для сети это обычный узел, а репутация у каждого элемента на нём своя.', more: '[Подробнее в Lagrix](https://lagrix.dev/ru/docs/19-node-requirements)' },
         { key: 'web4-ready', word: 'Web4 ready', text: 'элемент в сети Web4: агенты других узлов находят его и дают ему заказы через Lagrix. В [[Паспорте|passport]] такой элемент отмечен большой звездой.' },
       ],
-    },
-    memory: {
-      anchor: 'memory',
-      tab: 'Память',
-      title: 'Глубокая память и любознательная душа',
-      lead: 'У агентов узла две памяти. [[Базовая память|basic-memory]] работает сама: агент помнит ваши разговоры и знает, на чём вы остановились. [[Глубокая память|deep-memory]] хранит то, что вы просите запомнить, и возвращает это по вашей просьбе, хоть через месяц, хоть через год.',
-      use: {
-        title: 'Как пользоваться',
-        items: [
-          'Напишите или скажите [[главному агенту|main-agent]] «запомни…» своими словами, в Telegram или в терминале. Подойдут и «запиши», «сохрани», «не забудь»: агент понимает, чего вы хотите, на любом языке и не ищет точное слово.',
-          'Чтобы вернуть сказанное, спросите «напомни о…» или «что я говорил про…». Ответ соберётся из обеих памятей, с датой, источником и тем, насколько память уверена. Если нашлась вещь, агент пришлёт её файл.',
-          'Фото, документ или голосовое пришлите вместе со словами, например «запомни, это моя мама». Память сохранит их вместе и найдёт по смыслу.',
-          'Базовой памятью вы управляете словами: «покажи, что ты помнишь», «забудь вчерашний день», «не запоминай» и «запоминай снова». Глубокая память забывать пока не умеет.',
-        ],
-      },
-      files: {
-        title: 'Что память делает с каждым видом файлов',
-        items: [
-          'Фото и картинки память описывает словами и хранит вместе с описанием. Спросите «напомни, что было на чеке за такси», и получите описание и сам снимок.',
-          'PDF читается целиком и хранится вместе с описанием, поэтому найти его можно по содержанию, а не по имени файла.',
-          'Голосовое превращается в текст и разбирается как обычная фраза.',
-          'В видео память разбирает кадры и звук, если на компьютере есть программа ffmpeg. Без неё память скажет, что видео прочитать не может.',
-          'Документы и код читаются как текст. Код память никогда не запускает.',
-          'Текст длиннее 2000 слов хранится целиком, без разбора на факты.',
-          'Ссылки на страницы и YouTube узел пока не открывает: фраза сохранится, а ссылка останется непрочитанной.',
-        ],
-      },
-      key: {
-        title: 'Зачем ключ OpenAI, если есть подписка Claude',
-        text: 'Агенты работают по вашей подписке Claude. Памяти нужны ещё две вещи, которых у Anthropic нет. Первая — векторы: числа, по которым память ищет по смыслу, а не по совпадению слов; своей модели векторов у Anthropic нет. Вторая — распознавание речи: API Claude не принимает звук, поэтому голосовые превращает в текст модель OpenAI. Разбирает фразу на факты память тоже на недорогой модели OpenAI, и квота вашей подписки остаётся агентам. Обычное сообщение стоит доли цента.',
-        card: {
-          title: 'Добавьте ключ OpenAI',
-          text: 'Ключ хранится на вашем компьютере, в настройках ядра. Без него память не ищет по смыслу, голосовые не превращаются в текст, а база навыков закрыта.',
-          path: '/build/environment#OPENAI_API_KEY',
-          label: 'Добавить',
-        },
-      },
-      curious: {
-        title: 'Любознательная душа: опыт других людей',
-        paragraphs: [
-          'Агенты узла любопытны по природе. Прежде чем строить новое, агент смотрит, как ту же задачу решили другие проекты, в [[базе навыков|skills-base]] узла. База приходит с каждой копией узла: навыки других проектов, у каждого своя лицензия.',
-          'Если нашлось близкое, агент соединяет чужой опыт со своим рассуждением, пересказывает своими словами и называет, чей это навык. Если близкого нет, он так и говорит и не выдаёт ближайший навык за подходящий. Глубокая память работает так же: на просьбу, с которой не справится ни одна служба узла, она предложит навык из базы.',
-        ],
-      },
-    },
-    evolution: {
-      anchor: 'evolution',
-      tab: 'Эволюция',
-      title: 'Непрерывная эволюция',
-      lead: 'На старте вы получаете агента, который не во всём попадает в ваши ожидания: у него может быть свой взгляд на решение задачи. Лечится это просто. Объясните, какой результат вам нужен или как выглядит правильное решение, и агент закрепит это в памяти или в [[навыке|skill]], чтобы в следующий раз сделать по-вашему.',
-      today: {
-        title: 'Как агент учится уже сегодня',
-        items: [
-          'Помнит вас. То, что вы рассказываете о себе и о том, как вам нужно, агент записывает в [[базовую память|basic-memory]], и каждая новая сессия начинается с этого знания.',
-          'Разбирает свою работу. Закончив задачу, агент [[элемента|element]] спрашивает в Telegram, выключить ли его, и предлагает ответить [[«разбор»|review]]. Тогда он перечитывает свою сессию, находит, где споткнулся или где вы его поправили, и предлагает до трёх правок своих навыков. Вносит только те, на которые вы ответили «да», а ваш ответ записывает дословно, чтобы отклонённое не предлагать снова.',
-          'Строит то, чего не хватает. Если элементу не хватает возможности, он просит её у узла. [[Главный агент|main-agent]] ищет, кто в узле это уже умеет. Если никто, спрашивает вас, после «да» ведёт постройку и сообщает элементу, когда всё готово.',
-        ],
-      },
     },
   },
 }

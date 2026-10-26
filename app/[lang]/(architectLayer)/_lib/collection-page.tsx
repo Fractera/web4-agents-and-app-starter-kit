@@ -26,6 +26,7 @@ export function CollectionPage({
   content,
   widget,
   hideTopics = false,
+  tabs: tabsOverride,
 }: {
   lang: string
   /** Адрес папки-родителя без языка, например `/architect/tools`. */
@@ -54,6 +55,11 @@ export function CollectionPage({
    * Решает страница по состоянию узла; ряд вкладок скрывается вместе с темами — иначе он вёл бы на якоря, которых нет.
    */
   hideTopics?: boolean
+  /**
+   * Оглавление страницы, если его собирает сама страница (600-1, «Как это работает»: вкладка на раздел, якорь — заголовок h2).
+   * Не задано — ряд строится из тем `_data`, как и прежде; у остальных страниц ничего не меняется.
+   */
+  tabs?: WorkspaceItem[]
 }) {
   const ui = architectLayerUi(lang)
   const words = wordsOf(page, lang)
@@ -104,7 +110,7 @@ export function CollectionPage({
   // Верхний ряд — навигация ПО ЭТОЙ странице. Тем нет — ряда нет вовсе, и это
   // законное состояние раздела, у которого ещё нет содержимого.
   const tabs: WorkspaceItem[] | undefined =
-    topics.length > 0 ? topics.map((t) => ({ label: t.tab, href: `#${t.anchor}` })) : undefined
+    tabsOverride ?? (topics.length > 0 ? topics.map((t) => ({ label: t.tab, href: `#${t.anchor}` })) : undefined)
 
   return (
     <ArchitectPage

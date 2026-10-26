@@ -39,6 +39,12 @@ const DICTS = [
   },
 ]
 
+// Файлы, чьи метки раскрывает не словарь, а страница, которая его импортирует (600-1: разделы «Как это работает» берут
+// ликбез входа в своём `_components`). Их метки проверяются по ключам этого словаря, а не считаются «вне словаря».
+const EXPANDED_BY = {
+  'app/[lang]/(architectLayer)/architect/passport/how-it-works/_data/memory-sections.ts': 'app/[lang]/(architectLayer)/_i18n/architect-home.i18n.ts',
+}
+
 const term = await load('lib/content/blocks/term.ts', 'term')
 const KEY = /^[a-z0-9-]+$/
 const BREAKS = /[{}|[\]]|\*\*/
@@ -56,6 +62,7 @@ function strings(value, path, out = []) {
   return out
 }
 
+const glossaryKeys = new Map()
 for (const dict of DICTS) {
   const mod = await load(dict.file, `dict-${DICTS.indexOf(dict)}`)
   const langs = mod[dict.langs]
@@ -64,6 +71,8 @@ for (const dict of DICTS) {
     continue
   }
   const keysOf = {}
+  const union = glossaryKeys.get(dict.file) ?? new Set()
+  glossaryKeys.set(dict.file, union)
   for (const lang of langs) {
     const ui = mod[dict.ui](lang)
     const items = dict.terms(ui)
@@ -81,6 +90,7 @@ for (const dict of DICTS) {
       if (t.more !== undefined && !MORE.test(t.more)) errors.push(`${where}: «подробнее» не по форме [подпись](адрес)`)
     }
     keysOf[lang] = keys
+    for (const k of keys) union.add(k)
     for (const [path, text] of strings(ui, '')) {
       for (const key of term.termLabelKeys(text)) {
         labelCount++
@@ -107,6 +117,14 @@ function walk(dir) {
     else if (/\.(tsx?|mjs|json)$/.test(name)) {
       const rel = relative(ROOT, p)
       if (OWN.has(rel)) continue
+      if (EXPANDED_BY[rel.split(sep).join('/')]) {
+        const known = glossaryKeys.get(EXPANDED_BY[rel.split(sep).join('/')]) ?? new Set()
+        for (const m of readFileSync(p, 'utf8').matchAll(LABEL)) {
+          labelCount++
+          if (!known.has(m[2])) errors.push(`${rel}: метка «${m[0]}» — такого слова в ликбезе входа нет`)
+        }
+        continue
+      }
       for (const m of readFileSync(p, 'utf8').matchAll(LABEL)) errors.push(`${rel}: метка «${m[0]}» вне словаря, который её раскрывает — на странице встанут скобки`)
     }
   }

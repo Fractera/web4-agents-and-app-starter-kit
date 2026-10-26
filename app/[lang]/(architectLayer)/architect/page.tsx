@@ -105,33 +105,9 @@ export default async function Page({ params }: { params: Promise<{ lang: string 
       kind: 'list',
       items: home.basics.items.map((t) => words(`**${termWord(t)}** — ${t.text}${t.more ? ` ${t.more}` : ''}`)),
     },
-    // 599-2: глубокая память и любознательная душа; ключ OpenAI — карточкой-действием в редактор ключей ядра (вход сам не спрашивает).
-    { kind: 'h3', text: home.memory.title, id: home.memory.anchor },
-    { kind: 'p', text: words(home.memory.lead) },
-    { kind: 'h4', text: home.memory.use.title },
-    { kind: 'list', items: home.memory.use.items.map(words) },
-    { kind: 'h4', text: home.memory.files.title },
-    { kind: 'list', items: home.memory.files.items.map(words) },
-    { kind: 'h4', text: home.memory.key.title },
-    { kind: 'p', text: words(home.memory.key.text) },
-    {
-      kind: 'docref',
-      title: words(home.memory.key.card.title),
-      summary: words(home.memory.key.card.text),
-      href: `/${lang}${home.memory.key.card.path}`,
-      label: home.memory.key.card.label,
-      navigate: true,
-    },
-    { kind: 'h4', text: home.memory.curious.title },
-    ...home.memory.curious.paragraphs.map((p): Block => ({ kind: 'p', text: words(p) })),
-    // 599-3: непрерывная эволюция — только построенное (решение владельца 2026-10-26).
-    { kind: 'h3', text: home.evolution.title, id: home.evolution.anchor },
-    { kind: 'p', text: words(home.evolution.lead) },
-    { kind: 'h4', text: home.evolution.today.title },
-    { kind: 'list', items: home.evolution.today.items.map(words) },
   ]
 
-  const tabs: WorkspaceItem[] = [home.start, home.basics, home.memory, home.evolution].map(t => ({ label: t.tab, href: `#${t.anchor}` }))
+  const tabs: WorkspaceItem[] = [home.start, home.basics].map(t => ({ label: t.tab, href: `#${t.anchor}` }))
 
   return (
     <ArchitectPage

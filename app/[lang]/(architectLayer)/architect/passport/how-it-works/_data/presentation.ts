@@ -6,9 +6,14 @@
 // Числа о деньгах — по журналу Lagrix одним чтением (запись 51, шаг 534). `en` основа, `ru` перевод.
 
 export type PresentationPart = { title: string; items: string[] }
-export type PresentationSection = { title: string; parts: PresentationPart[] }
+/** Карточка внутри раздела (раздел «Глубокая память»): кнопка ведёт на `/{lang}` + `path`. */
+export type PresentationSectionCard = { title: string; text: string; action: string; path: string }
+/** Раздел страницы: вкладка оглавления (`tab`), вступление под заголовком (`lead`), части (`parts`), карточка (`card`). */
+export type PresentationSection = { title: string; tab: string; lead?: string; parts: PresentationPart[]; card?: PresentationSectionCard }
 export type PresentationCard = { title: string; text: string; action: string }
 export type PresentationWords = { intro: string; card: PresentationCard; lagrixCard: PresentationCard; aiCard: PresentationCard; sections: PresentationSection[] }
+
+import { MEMORY_SECTIONS } from './memory-sections'
 
 const UI: Record<'en' | 'ru', PresentationWords> = {
   en: {
@@ -38,6 +43,7 @@ const UI: Record<'en' | 'ru', PresentationWords> = {
     sections: [
       {
         title: '1. Ready for Web4 from the first minute',
+        tab: 'Web4-ready',
         parts: [
           {
             title: '1.1 What «Web4-ready» means',
@@ -67,6 +73,7 @@ const UI: Record<'en' | 'ru', PresentationWords> = {
       },
       {
         title: '2. The ordinary web: a generator of sites and apps',
+        tab: 'Ordinary web',
         parts: [
           {
             title: '2.1 What you can build',
@@ -106,6 +113,7 @@ const UI: Record<'en' | 'ru', PresentationWords> = {
       // третьим: карточки Lagrix и ИИ привязаны к разделам 1 и 2 по индексу (`_components/index.ts`).
       {
         title: '3. Killer features: reverse engineering and the product quiz',
+        tab: 'Killer features',
         parts: [
           {
             title: '3.1 Learn from products that already work',
@@ -127,6 +135,7 @@ const UI: Record<'en' | 'ru', PresentationWords> = {
       },
       {
         title: '4. At home or on a dedicated server',
+        tab: 'At home or server',
         parts: [
           {
             title: '4.1 A home server',
@@ -172,6 +181,7 @@ const UI: Record<'en' | 'ru', PresentationWords> = {
     sections: [
       {
         title: '1. Готов к Web4 с первой минуты',
+        tab: 'Web4-ready',
         parts: [
           {
             title: '1.1 Что значит «готов к Web4»',
@@ -201,6 +211,7 @@ const UI: Record<'en' | 'ru', PresentationWords> = {
       },
       {
         title: '2. Обычный интернет: генератор сайтов и приложений',
+        tab: 'Обычный интернет',
         parts: [
           {
             title: '2.1 Что можно построить',
@@ -238,6 +249,7 @@ const UI: Record<'en' | 'ru', PresentationWords> = {
       },
       {
         title: '3. Киллер-фичи: реверс-инжиниринг и продуктовый квиз',
+        tab: 'Киллер-фичи',
         parts: [
           {
             title: '3.1 Учитесь у продуктов, которые уже работают',
@@ -259,6 +271,7 @@ const UI: Record<'en' | 'ru', PresentationWords> = {
       },
       {
         title: '4. Дома или на выделенном сервере',
+        tab: 'Дома или сервер',
         parts: [
           {
             title: '4.1 Домашний сервер',
@@ -283,5 +296,7 @@ const UI: Record<'en' | 'ru', PresentationWords> = {
 }
 
 export function presentationWords(lang: string): PresentationWords {
-  return lang === 'ru' ? UI.ru : UI.en
+  const base = lang === 'ru' ? UI.ru : UI.en
+  // 600-1: разделы 5 и 6 («Глубокая память», «Непрерывная эволюция») переехали со входа — см. `memory-sections.ts`.
+  return { ...base, sections: [...base.sections, ...MEMORY_SECTIONS[lang === 'ru' ? 'ru' : 'en']] }
 }
