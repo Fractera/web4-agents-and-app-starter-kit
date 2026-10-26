@@ -497,8 +497,14 @@ function humanPrompt(service, chatId, who, said, thing = null) {
   return `${knowYourself(service)}Сообщение из Telegram от ${who} (chat_id ${chatId}), пока ты был выключен: ${said}${att} — ответь ему в Telegram инструментом reply канала (chat_id ${chatId}).`
 }
 
-// 597-4: the node's commands (`lib/agent-kit/commands.cjs`) — read lazily: the bridge runs inside the core, and its root is `ROOT`.
-const nodeCommands = () => require(path.join(ROOT, 'lib', 'agent-kit', 'commands.cjs'))
+// 597-4: the node's commands (`lib/agent-kit/commands.cjs`) — put on `globalThis` by the bridge's mount (`lib/agent-kit/mount.cjs`).
+// 🛑 Not `require(path.join(ROOT, …))`: a door imports this file, and the core's build cannot resolve a path from the working folder
+// («server relative imports are not implemented yet», ✗ 552-6; repeated in 597-4 and found by the rebuild of 599-4 — 26 errors).
+const nodeCommands = () => {
+  const m = globalThis.__web4NodeCommands
+  if (!m) throw new Error('the node commands are not mounted')
+  return m
+}
 const THING_KINDS = [['document', 'документ'], ['voice', 'голосовое'], ['audio', 'аудио'], ['video', 'видео'], ['video_note', 'видеосообщение']]
 
 /** The thing a Telegram message carries — { kind, label, file_id } — or null. A photo — its largest size (the plugin does the same). */
