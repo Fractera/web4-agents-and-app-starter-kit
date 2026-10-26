@@ -3,7 +3,7 @@ import { collectionMetadata } from '../../_lib/collection-metadata'
 import { data } from './_data'
 import { content } from './_components'
 
-// РАЗДЕЛ «Граф» — `/{lang}/architect/graph` (540-2: как «Дизайн», «Блоки» и CONFIG).
+// РАЗДЕЛ «Глубокая память» — `/{lang}/architect/memory` (596-6: как «Граф», 540-2).
 //
 // 🔒 ТОНКИЙ ВХОД: страница называет свою папку и папку-родителя, отдаёт свои слова
 // и свою работающую часть. Меню, раскладка и обработка пустоты — в оболочке.
