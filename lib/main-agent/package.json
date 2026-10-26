@@ -23,6 +23,10 @@
     "site-rules": "node ../../scripts/site-rules.mjs",
     "study": "node ../../scripts/study.mjs",
     "look": "node ../../scripts/main-agent-cli.mjs look",
-    "memory": "node ../../scripts/memory.mjs"
+    "memory": "node ../../scripts/memory.mjs",
+    "commands": "node ../../scripts/node-commands.mjs commands",
+    "remember": "node ../../scripts/node-commands.mjs remember",
+    "remind": "node ../../scripts/node-commands.mjs remind",
+    "wake": "node ../../scripts/node-commands.mjs wake"
   }
 }

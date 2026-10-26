@@ -16,6 +16,8 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const modes = createRequire(import.meta.url)(join(ROOT, 'lib', 'agent-kit', 'modes.cjs'))
+// 597-1: the node's hard commands — the head of their block in a session's prompt.
+const COMMANDS_HEAD = createRequire(import.meta.url)(join(ROOT, 'lib', 'agent-kit', 'commands.cjs')).HEAD
 
 /** 591: без файлов режима — есть душа: файл «душа + фраза»; души нет: фраза строкой, как до 552-5. */
 function soulAhead(dir) {
@@ -80,6 +82,10 @@ for (const { name, dir } of elements) {
       if (!text.startsWith(head)) problems.push(`${name} ${mode}: подсказка не начинается с души узла и фразы сессии`)
       if (!text.includes(own)) problems.push(`${name} ${mode}: в подсказке нет «${own}»`)
       if (text.includes(foreign)) problems.push(`${name} ${mode}: в подсказке чужой раздел «${foreign}»`)
+      // 597-1: the node's hard commands reach a session with a person and never a working-process session (it has no person).
+      const commandsIn = text.includes(COMMANDS_HEAD)
+      if (mode === 'build' && !commandsIn) problems.push(`${name} build: в подсказке нет команд узла (lib/agent-kit/commands.json)`)
+      if (mode === 'work' && commandsIn) problems.push(`${name} work: в подсказке команды узла — у рабочего процесса нет человека`)
     }
     rmSync(out, { recursive: true, force: true })
   } else if (!soulAhead(dir)) {

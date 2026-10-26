@@ -1,0 +1,71 @@
+{
+  "about": "The node's hard commands (node step 597). One list: the menu of the main agent's Telegram bot, the answer «commands» of a sleeping bot and of every agent, the lines in the prompt of every session with a person. A new command is one entry here. Owner 2026-10-25: «инструкцию о всех жёстко запрограммированных командах таких как: запомни, напомни о, включить, выключить, какие-нибудь новые инструкции которые будут появляться в будущем». A command is recognised by the PURPOSE of a message, by the model, in any language and any words (owner 2026-10-26: «анализ прямого совпадения это вариант который нельзя использовать»; «Запомни, запиши, сохрани, пометь… и так далее эти слова должны как и многие другие выражения аналогичным образом выявлять намерения пользователя»): words are examples, not a list. by: main — the node's main agent runs it; any — the agent the person writes to. menu: false — not in the bot's menu. Slash: 1–32 characters, a–z, 0–9, «_» (Telegram Bot API, setMyCommands).",
+  "commands": [
+    {
+      "id": "remember",
+      "slash": "remember",
+      "words": { "ru": ["запомни", "запиши", "сохрани", "пометь", "не забудь"], "en": ["remember", "note down", "save this", "keep this", "don't forget"] },
+      "what": {
+        "ru": "Запомни … — сохранить в глубокой памяти узла фразу, фото, PDF или голосовое",
+        "en": "Remember … — keep a phrase, a photo, a PDF or a voice note in the node's deep memory"
+      },
+      "by": "main",
+      "run": "npm run remember -- \"<the words after the command>\" [--file <path of a photo, PDF or voice note>]"
+    },
+    {
+      "id": "remind",
+      "slash": "remind",
+      "words": { "ru": ["напомни о", "что я говорил про", "вспомни", "что ты помнишь о"], "en": ["remind me about", "what did I say about", "recall"] },
+      "what": {
+        "ru": "Напомни о … — ответ из обеих памятей узла, с датой и источником",
+        "en": "Remind me about … — an answer from both memories of the node, with the date and the source"
+      },
+      "by": "main",
+      "run": "npm run remind -- \"<the question>\""
+    },
+    {
+      "id": "on",
+      "slash": "on",
+      "words": { "ru": ["включить", "включи"], "en": ["turn on"] },
+      "what": {
+        "ru": "Включить <элемент> — включить агента элемента; в боте спящего агента — включить его",
+        "en": "Turn on <element> — turn an element's agent on; in a sleeping agent's bot — turn that agent on"
+      },
+      "by": "any",
+      "run": "npm run wake -- <element id>"
+    },
+    {
+      "id": "off",
+      "slash": "off",
+      "words": { "ru": ["выключить", "выключи"], "en": ["turn off"] },
+      "what": {
+        "ru": "Выключить — выключить агента, которому пишете; «выключить <элемент>» главному агенту — агента элемента",
+        "en": "Turn off — turn off the agent you write to; «turn off <element>» to the main agent — that element's agent"
+      },
+      "by": "any",
+      "run": "npm run close -- <element id>; with no element: npm run done -- --close"
+    },
+    {
+      "id": "review",
+      "slash": "review",
+      "words": { "ru": ["разбор"], "en": ["review"] },
+      "what": {
+        "ru": "Разбор — перед выключением агент элемента предложит, как улучшить свои навыки",
+        "en": "Review — before turning off, an element's agent suggests how to improve its skills"
+      },
+      "by": "any",
+      "menu": false
+    },
+    {
+      "id": "commands",
+      "slash": "commands",
+      "words": { "ru": ["команды"], "en": ["commands"] },
+      "what": {
+        "ru": "Команды — прислать этот список",
+        "en": "Commands — send this list"
+      },
+      "by": "any",
+      "run": "npm run commands"
+    }
+  ]
+}
