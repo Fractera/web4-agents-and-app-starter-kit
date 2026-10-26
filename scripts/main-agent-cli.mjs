@@ -37,6 +37,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const require = createRequire(import.meta.url)
 const supervision = require('../lib/web4-items/supervision.cjs')
 const nodeType = require('../lib/web4-items/node-type.cjs')
+// 603-1: самоописание элементов — паспорт и измеренное одним модулем (что это, где живёт, где данные, двери из кода, кто зависит).
+const self = require('../lib/a2a/self-description.cjs')
 // 552-4: поручение главного агента элементу — строительный процесс; слово уже стоит (например, ответ ядра сессии рабочего процесса)
 // — остаётся своё. Мост ядра по слову будит сессию процесса (`lib/agent-kit/modes.cjs`).
 const modes = require('../lib/agent-kit/modes.cjs')
@@ -103,6 +105,15 @@ const reachOf = (id) => {
 }
 const rolesFile = join(ROOT, 'data', 'node', 'roles.json')
 const roles = () => ({ ...readJson(join(ROOT, 'WEB4-ITEMS-REGISTRY', 'roles.json'), {}), ...readJson(rolesFile, {}) })
+const hostOf = (id) => (id === 'root' ? ZONE || 'root' : ZONE ? `${addressOf(id)}.${ZONE}` : addressOf(id))
+const selfAll = () => self.describeAll({ root: ROOT, roles: roles(), addressOf: hostOf })
+// 603-3 (разбор 2026-10-26: агент гадал, «облачное ли это по подписке»): где живут узел и его данные — одна постоянная строка.
+const MACHINE_FACT = "Everything in this node runs on this computer: each element is a process here, and the node's data lives on this computer's disk (in the data, storage, vectors, graph and memory elements). Only two things go out: copies of the public pages kept in Cloudflare, so the sites answer while the computer is off, and the texts sent to OpenAI for vectors, voice notes and the memory's parsing."
+// 603-2: порог сходства по смыслу (модель векторов элемента vectors). Замер 2026-10-26 на 13 элементах: 30 намерений — нужный элемент первым
+// у 29, его оценка от 0,239; 6 работ, которых в узле нет, — лучшая оценка до 0,193. Порог посередине, один для поиска и для проверки
+// на дубль: что `find` показал бы, на том `create` останавливается. Запас узкий — с ростом узла калибровку повторять (итог 603-2 в /code).
+const FIND_MIN = 0.21
+const DUP_MIN = FIND_MIN
 
 const [cmd, ...rest] = process.argv.slice(2)
 const flag = (name) => { const i = rest.indexOf(name); return i >= 0 ? rest[i + 1] ?? '' : null }
@@ -113,6 +124,14 @@ const has = (name) => rest.includes(name)
 // родился (их набор задаёт Fractera); рождённые — числом; кто делает работу — `find` (не больше пяти); один элемент — `contacts <id>`.
 if (cmd === 'contacts') {
   const [one] = rest
+  // 603-1: прямой вопрос «что у тебя есть», «из чего ты состоишь» и перед любым рождением — все элементы, рождённые тоже, по строке.
+  // Пробуждение по-прежнему постоянного размера (548-14): этот список зовут только тогда, когда он нужен.
+  if (one === '--all') {
+    console.log(`Node ${ZONE || '(no domain yet)'} — core ${ORIGIN}. ${MACHINE_FACT}`)
+    for (const e of selfAll()) console.log(`${self.listLine(e)} — ${reachOf(e.id)}`)
+    console.log('One element in full — what it is, where its data lives, its doors, who depends on it: npm run card -- <id>')
+    process.exit(0)
+  }
   const r = await core('/api/node/projects').catch(() => null)
   const rows = Array.isArray(r?.body?.rows) ? r.body.rows : registry().map((s) => ({ id: s.id, custom: Boolean(s.born), service: s.id, status: 'unknown' }))
   const role = roles()
@@ -127,9 +146,10 @@ if (cmd === 'contacts') {
   // 553-1: тип узла — одной строкой постоянного размера (548-14: пробуждение не растёт с узлом).
   const type = nodeType.readNodeType(ROOT)
   console.log(`Node type: ${type} — ${type === 'factory' ? 'an app factory: hosting of projects of different owners; new custom elements are born on their own settings' : 'a single project: one owner, every element under the core\'s CONFIG'} (npm run node-type -- get)`)
+  console.log(MACHINE_FACT)
   const bornIds = new Set(registry().filter((s) => s.born).map((s) => s.id))
   for (const x of rows.filter((y) => !bornIds.has(y.id))) console.log(line(x))
-  console.log(`+ ${rows.filter((y) => bornIds.has(y.id)).length} element(s) born in this node — who does a job: npm run find -- <English words>; one element: npm run contacts -- <id>`)
+  console.log(`+ ${rows.filter((y) => bornIds.has(y.id)).length} element(s) born in this node — all of them by name: npm run contacts -- --all; who does a job: npm run find -- <words>; one element in full: npm run card -- <id>`)
   process.exit(0)
 }
 
@@ -170,6 +190,21 @@ if (cmd === 'look') {
 if (cmd === 'find') {
   const words = rest.join(' ').trim()
   if (!words) fail('find <plain words of the job>')
+  // 603-2: по смыслу, на любом языке — самоописания элементов в элементе vectors (векторы — ключом OpenAI ядра). ✗ 2026-10-26: поиск по
+  // словам не нашёл stripe на «accept money», auth на «user login», memory на «keep a voice message» — и create родил бы дубль.
+  // Нет ключа, vectors или data — по словам, как прежде (ниже).
+  const all = selfAll()
+  const hits = await self.findByMeaning(words, all, { k: 5 })
+  if (hits) {
+    const best = hits.filter((h) => h.score >= FIND_MIN).slice(0, 5)
+    if (!best.length) { console.log(`Nobody in this node does «${words}» (closest by meaning: ${hits.slice(0, 2).map((h) => `${h.id} ${h.score.toFixed(2)}`).join(', ')}). Next: npm run lagrix -- ${words}`); process.exit(0) }
+    for (const h of best) {
+      const x = all.find((y) => y.id === h.id)
+      console.log(`- ${x.id} — ${x.short || x.role || 'no description yet'}${x.on ? '' : ` · TURNED OFF (${x.offReason}) — only the architect turns it on`} · match ${h.score.toFixed(2)} — ${reachOf(x.id)}`)
+    }
+    console.log('Everything about one of them: npm run card -- <element>')
+    process.exit(0)
+  }
   // 589-3: `off=1` — и выключенные элементы с навыками из визитки (✗ 2026-10-24: stripe «skills: —», и «нет» вышло ложным).
   const r = await core(`/api/node/a2a?q=${encodeURIComponent(words)}&off=1`).catch((e) => fail(`the core did not answer: ${e.message}`))
   const entries = r.body?.entries ?? []
@@ -192,13 +227,14 @@ if (cmd === 'card') {
   if (!id) fail('card <element>')
   const e = registry().find((s) => s.id === id || addressOf(s.id) === id) ?? fail(`no element ${id} in the registry`)
   const dir = itemDir(e.id) ?? fail(`${id}: no folder`)
-  const card = readJson(join(dir, 'OWN-SERVICE-PROPS', 'A2A-CARD.json'), null)
-  const off = e.off && typeof e.off === 'object' ? (typeof e.off.reason === 'string' ? e.off.reason : e.off.reason?.en ?? 'no reason') : null
-  console.log(`${addressOf(e.id)} · ${off ? `TURNED OFF (${off}) — only the architect turns it on` : 'on'}`)
-  if (!card) { console.log('no A2A card: ask its role (npm run contacts -- ' + e.id + ')'); process.exit(0) }
-  const ext = (card.capabilities?.extensions ?? []).find((x) => String(x?.uri).includes('/a2a/ext/node/'))?.params ?? {}
-  for (const s of card.skills ?? []) console.log(`skill ${s.id} — ${firstSentence(s.description, 220)}`)
-  for (const d of ext.doors ?? []) console.log(`door ${d.method ?? 'GET'} ${d.path}${d.skill ? ` → ${d.skill}` : ''}`)
+  // 603-1: самоописание — паспорт и измеренное, а не голая карточка A2A (✗ 2026-10-26: у 7 из 13 элементов в ней были только служебные
+  // навыки шаблона, а двери — только из app/api; главный агент не знал, что такое база данных узла).
+  void dir
+  const d = selfAll().find((x) => x.id === e.id)
+  if (!d) fail(`${id}: no description`)
+  console.log(self.cardText(d))
+  if (!d.on) console.log(`Only the architect turns it on: after their «yes», npm run power -- ${e.id} on`)
+  console.log(`Reach its agent: ${reachOf(e.id)}`)
   process.exit(0)
 }
 
@@ -430,6 +466,26 @@ if (cmd === 'create') {
   const by = flag('--supervise') ?? 'architect'
   if (!role || !brief) fail('create --role "<one sentence>" (--brief "<the task, the person\'s words first>" | --brief-file <path>) [--native] [--supervise main|architect] [--no-wake]')
   if (!['main', 'architect'].includes(by)) fail('--supervise main|architect')
+
+  // 603-2: ПРОВЕРКА НА ДУБЛЬ — в коде, а не в инструкции. Владелец 2026-10-26: «в 62-й раз она будет строить память у нас будет по 60 по
+  // 100 по 1000 одинаковых элементов?». Роль и задание сравниваются по смыслу со всеми элементами узла; похожий найден — рождения нет, пока
+  // человек не скажет, что работа другая (`--different "<его слова>"`). Без поиска по смыслу — по словам роли, тем же поиском ядра, что `find`.
+  const different = (flag('--different') ?? '').trim()
+  if (!different) {
+    const all = selfAll()
+    const hits = await self.findByMeaning(`${role} ${brief.slice(0, 600)}`, all, { k: 3 })
+    if (hits) {
+      const near = hits.filter((h) => h.score >= DUP_MIN)
+      if (near.length) {
+        const x = all.find((y) => y.id === near[0].id)
+        fail(`this job looks like ${x.id} (match ${near[0].score.toFixed(2)}): ${x.short || x.role}. Look: npm run card -- ${x.id}; if it can do the job, route the person to it (skill route-to-element). Only if the person says the job is different: run again with --different "<their words why>"`)
+      }
+    } else {
+      const r = await core(`/api/node/a2a?q=${encodeURIComponent(role)}&off=1`).catch(() => null)
+      const lex = (r?.body?.entries ?? []).slice(0, 3).map((x) => x.address)
+      if (lex.length) fail(`maybe already in this node: ${lex.join(', ')} (by words: the search by meaning is unavailable). Look: npm run card -- ${lex[0]}. Only if the person says the job is different: run again with --different "<their words why>"`)
+    }
+  } else console.log(`the person says this job is different from what the node has: «${different}»`)
 
   // 1. Черновик — тем же правилом имени, что кнопка «Создать WEB4 ITEM» (`lib/web4-items/drafts.ts`).
   const RESERVED = new Set(['auth', 'blocks', 'build', 'config', 'data', 'design', 'hosting', 'kits', 'passport', 'root', 'admin', 'architect', 'api', 'www', 'mail', 'memory', 'telegram', 'store', 'items'])
