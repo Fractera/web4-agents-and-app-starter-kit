@@ -3894,4 +3894,30 @@ The owner (step 596): «ничего не мешает нам установит
 - `npm run check:modes`: a native element needs no study pass file — native elements have no study pass (594-7; ✗ memory, the first
   element on native v0.1.28, turned the guard red; 7b900db).
 - 🛑 Not built: reading links (pages, YouTube) — an honest refusal `links-not-built-on-node`; video without ffmpeg —
-  `describe-ffmpeg-failed`; the graph cannot forget; the main agent's commands «запомни» / «напомни о» — step 597.
+  `describe-ffmpeg-failed`; the graph cannot forget. The main agent's commands «запомни» / «напомни о» — step 597 below.
+
+## The node's commands: remember, remind, on, off — and the memory thinks with gpt-6-luna (step 597, 2026-10-26)
+
+The owner (2026-10-25): «инструкцию о всех жёстко запрограммированных командах таких как: запомни, напомни о, включить, выключить …
+инструкции обновить с требованием прослушивать эти слова»; 2026-10-26: «анализ прямого совпадения это вариант который нельзя
+использовать» and «Запомни, запиши, сохрани, пометь… и так далее эти слова должны … выявлять намерения пользователя».
+- **One list** — `lib/agent-kit/commands.json` (remember, remind, on, off, review, commands; `commands.cjs` renders it): the main agent's bot
+  menu, the answer «commands», a block in the prompt of every session with a person (`modes.cjs`; a working-process session has none —
+  `check:modes`). 🔒 A command is recognised **by the purpose of a message, by the model**, in any language; the words in the list are
+  examples. Exact matching lives only where no model runs and a miss loses nothing: the menu's slash commands and a bare «команды» /
+  «включить» to a sleeping bot.
+- **The main agent's commands** (`scripts/node-commands.mjs`, `data/main-agent`): `npm run remember -- "<words>" [--file <path>]…` — a phrase
+  WITH its things in one `/v1/remember` call (the memory ties a thing to its words only inside one call: the main agent pairs them);
+  `npm run remind -- "<question>"` — the deep memory and the diary (`recallBest`), a found thing's file into
+  `data/services/build/memory-files/`; both turn the memory element on for the task and off after, and refuse when the person switched
+  memory off; `npm run wake -- <id>` — an element's agent with no task; `npm run commands [-- menu | check]`. Skill `use-deep-memory`.
+- **Telegram** (`kits/_agent-kit/core/server/telegram.cjs`): the menu in the architect's chat (`setMyCommands`, scope chat — above the
+  plugin's `all_private_chats`), set at the link and by `npm run commands -- menu`; a sleeping bot (`idleDecision`) keeps a photo, a
+  document, a voice note and a caption in the question «turn on and pass?» with the file's number, answers «команды» with the list and
+  starts the agent with no task on «включить»; «Turn it off?» names «commands»; the table translations remember their English
+  (`translate.cjs`, `_source`).
+- **The memory thinks with OpenAI `gpt-6-luna`** (memory v2.1.0, the owner lifted his 2026-09-09 law): a phrase ≈ 9 s of model and ≈ 18 s in
+  all, ≈ $0.0004 a call; without an OpenAI key — `claude -p` Sonnet as before. Memory v2.1.1: its things are its own on a node too (✗ since
+  596 every object was «not-ours»: `ownIds` read a table of the former single database).
+- 🛑 Not built: menus of elements' bots; forgetting in the deep memory; the main agent's live run by these commands — the owner's check in
+  Telegram (a photo, then «запомни, это моя мама», then «покажи маму»).
