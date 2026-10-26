@@ -283,6 +283,12 @@ async function idleTick(service) {
     // допущенного при выключенном терминале — не «терминал не активен», а тот же вопрос с кнопками; после «Запустить» агент
     // получает это сообщение. 597-4: с вещью и подписью; команды узла — по `idleDecision`; прочие «/…» и неподключённая
     // подписка — прежнее сообщение о состоянии.
+    // 604: a folder trust question waits for this chat's «yes» — a short plain yes answers it here, with no agent turned on. Anything
+    // else goes on as before, and the main agent, woken by it, reads the person's meaning (the pending question rides in its prompt).
+    if (!activated && trustWaitingVia(service).length && trustYes(msg.text)) {
+      await answerTrustHere(service, token, msg.chat.id)
+      continue
+    }
     const d = activated ? { do: 'status' } : idleDecision(msg)
     if (d.do === 'list') {
       await tg(token, 'sendMessage', { chat_id: msg.chat.id, text: await commandsText(service), disable_web_page_preview: true })
@@ -446,6 +452,10 @@ const ASK = {
     waitingTerminal: (a, link) => `Agent ${a} is waiting for your answer in the terminal: ${link}`,
     // 597-4: «turn on» typed to a sleeping agent's bot — the agent starts with no task.
     onNow: (a) => `Agent ${a} is on — write to it.`,
+    // 604: the folder trust question, asked in the main agent's chat.
+    trustAsk: (a) => `Agent ${a} asks to work in its own folder on this computer. Claude Code asks this once for every folder. Allow? Reply «yes».`,
+    trustDone: (a) => `Done: agent ${a} works in its folder. This question will not come again.`,
+    trustGone: (a) => `Agent ${a} is no longer waiting for this answer — it was answered or turned off.`,
   },
   ru: {
     oneCall: (a, c) => `Агенту ${a} пришёл вопрос от агента ${c}`,
@@ -469,6 +479,9 @@ const ASK = {
     trustLine: 'Его папка ещё не подтверждена в Claude Code — «Включить» подтвердит и её.',
     waitingTerminal: (a, link) => `Агент ${a} ждёт вашего ответа в терминале: ${link}`,
     onNow: (a) => `Агент ${a} включён — пишите ему.`,
+    trustAsk: (a) => `Агент ${a} просит разрешения работать в своей папке на этом компьютере. Claude Code спрашивает об этом один раз для каждой папки. Разрешить? Ответьте «да».`,
+    trustDone: (a) => `Готово: агент ${a} работает в своей папке. Больше этот вопрос не появится.`,
+    trustGone: (a) => `Агент ${a} уже не ждёт этого ответа — вопрос закрыт или агент выключен.`,
   },
 }
 
@@ -494,7 +507,7 @@ function knowYourself(service) {
  */
 function humanPrompt(service, chatId, who, said, thing = null) {
   const att = thing ? ` [вложение: ${thing.label}, file_id ${thing.file_id} — скачай его инструментом download_attachment канала и прочитай]` : ''
-  return `${knowYourself(service)}Сообщение из Telegram от ${who} (chat_id ${chatId}), пока ты был выключен: ${said}${att} — ответь ему в Telegram инструментом reply канала (chat_id ${chatId}).`
+  return `${knowYourself(service)}Сообщение из Telegram от ${who} (chat_id ${chatId}), пока ты был выключен: ${said}${att} — ответь ему в Telegram инструментом reply канала (chat_id ${chatId}).${trustNote(service)}`
 }
 
 // 597-4: the node's commands (`lib/agent-kit/commands.cjs`) — put on `globalThis` by the bridge's mount (`lib/agent-kit/mount.cjs`).
@@ -817,7 +830,88 @@ async function tellWaiting(service) {
   return { sent, via }
 }
 
+// ── ДОВЕРИЕ ПАПКЕ — ВОПРОСОМ В ЧАТЕ ГЛАВНОГО АГЕНТА (604) ─────────────────────────────────────────────────────────────────────────
+//
+// Владелец 2026-10-26: «мы ставим перед собой цель чтобы пользователи могли поставить один единственный Telegram бот для главного
+// агента и только при помощи этого бота выполнять любые задачи вообще не касаясь компьютера … Достаточно будет просто отправить
+// запрос … вопрос задается один раз в случае подтверждения больше не повторяется». Агент элемента, включённый без кнопки «Включить»
+// (пробуждение дверью, надзор без согласия), стоит на вопросе Claude Code «Is this a project you trust?». Ответить за человека узел не
+// вправе — поэтому вопрос уходит допущенным бота главного агента, а «да» нажимает ту же стрелку и Enter, что человек в терминале
+// (`bridge.cjs`, `answerTrust`). Claude Code помнит доверие пути папки навсегда (`~/.claude.json`) — второй раз вопроса нет.
+// Ждущие вопросы — `data/node/trust-pending.json` (ключ сессии → через какого бота спросили): его читают копия бота главного агента
+// и дверь `POST /api/agents/trust`, у каждой копии комплекта свои модули. Бота главного агента нет — прежняя ссылка на терминал.
+
+const trustFile = () => path.join(ROOT, 'data', 'node', 'trust-pending.json')
+const trustPending = () => readJson(trustFile(), {})
+function setTrustPending(map) {
+  mkdirSync(path.dirname(trustFile()), { recursive: true })
+  writeFileSync(trustFile(), JSON.stringify(map, null, 2) + '\n')
+}
+const elementOf = (key) => String(key).replace(/--.*$/, '')
+/** Ключи сессий, чей вопрос доверия задан через бота `via`. */
+const trustWaitingVia = (via) => Object.entries(trustPending()).filter(([, v]) => v && v.via === via).map(([k]) => k)
+
+// Короткое «да» на разных языках и его спутники; «хоккей» — так распознавание голоса пишет «окей» (слова владельца 2026-10-26).
+// Промах ничего не теряет: сообщение уходит главному агенту, и его модель читает смысл.
+const YES_WORDS = new Set(['да', 'ага', 'угу', 'ок', 'окей', 'хоккей', 'хорошо', 'ладно', 'подтверждаю', 'подтверди', 'разрешаю', 'разреши',
+  'разрешить', 'можно', 'конечно', 'давай', 'yes', 'y', 'yep', 'yeah', 'ok', 'okay', 'sure', 'confirm', 'confirmed', 'allow', 'approve',
+  'trust', 'go', 'si', 'sí', 'oui', 'ja'])
+const YES_FILLER = new Set(['и', 'всё', 'все', 'пожалуйста', 'please', 'and'])
+function trustYes(text) {
+  const words = String(text ?? '').toLowerCase().replace(/[.,!?;:«»"'()\-—…]+/g, ' ').split(/\s+/).filter(Boolean)
+  return words.length > 0 && words.length <= 6 && words.every((w) => YES_WORDS.has(w) || YES_FILLER.has(w)) && words.some((w) => YES_WORDS.has(w))
+}
+
+/** Строка для главного агента, которого будит сообщение человека, пока вопрос доверия ждёт его ответа. */
+function trustNote(service) {
+  const keys = trustWaitingVia(service)
+  if (!keys.length) return ''
+  return ` [Узел: ${keys.map((k) => shortName(named(elementOf(k)))).join(', ')} ждёт разрешения работать в своей папке — человека спросили в этом чате. Если его сообщение — согласие, выполни npm run trust -- ${keys.map(elementOf).join(' ')} и коротко скажи, что готово; без его согласия не выполняй.]`
+}
+
+/** Задать вопрос доверия папке. Бот главного агента подключён — вопрос в его чат; нет — прежняя ссылка на терминал. */
+async function tellTrust(key) {
+  const element = elementOf(key)
+  if (element === MAIN_AGENT || !isService(element) || !connected(MAIN_AGENT)) return tellWaiting(key)
+  const map = trustPending()
+  map[key] = { via: MAIN_AGENT, at: new Date().toISOString() }
+  setTrustPending(map)
+  const token = storedToken(MAIN_AGENT)
+  const t = await askTable(MAIN_AGENT)
+  const a = shortName(named(element))
+  let sent = 0
+  const chats = access(MAIN_AGENT).allowed
+  for (const chat of chats) {
+    const r = await tg(token, 'sendMessage', { chat_id: chat, text: (t.trustAsk ?? ASK.en.trustAsk)(a), disable_web_page_preview: true })
+    if (r?.ok) sent++
+  }
+  console.log(`[telegram] ${key}: вопрос доверия папке → бот главного агента, отправлено ${sent} из ${chats.length}`)
+  return { sent, via: MAIN_AGENT, trust: true }
+}
+
+/** Вопрос снят (ответили или сессии больше нет). */
+function clearTrust(key) {
+  const map = trustPending()
+  if (!(key in map)) return
+  delete map[key]
+  setTrustPending(map)
+}
+
+/** «Да» пришло спящему боту главного агента: ответить на каждый ждущий вопрос и сказать человеку итог. */
+async function answerTrustHere(service, token, chatId) {
+  const t = await askTable(service)
+  const answer = globalThis.__web4AgentTrust
+  for (const key of trustWaitingVia(service)) {
+    const out = typeof answer === 'function' ? await answer(key) : { ok: false, reason: 'not-mounted' }
+    if (!out.ok) clearTrust(key)
+    const a = shortName(named(elementOf(key)))
+    await tg(token, 'sendMessage', { chat_id: chatId, text: out.ok ? (t.trustDone ?? ASK.en.trustDone)(a) : (t.trustGone ?? ASK.en.trustGone)(a), disable_web_page_preview: true })
+  }
+}
+
 module.exports = {
+  // 604: доверие папке — вопросом в чате главного агента.
+  tellTrust, clearTrust, trustPending, trustYes,
   // 552-6: помощники и правило имени для ячеек ботов (`telegram-slots.cjs`).
   tg, readJson, writeSecret, NODE_CODE, namedSuggestion, hasSkillGroups,
   PLUGIN, isService, stateDir, storedToken, saveToken, activationLink, saveMessages, channelLaunch,

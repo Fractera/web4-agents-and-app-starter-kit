@@ -14,6 +14,7 @@
     "role": "node ../../scripts/main-agent-cli.mjs role",
     "supervise": "node ../../scripts/main-agent-cli.mjs supervise",
     "close": "node ../../scripts/main-agent-cli.mjs close",
+    "trust": "node ../../scripts/main-agent-cli.mjs trust",
     "person": "node ../../scripts/main-agent-cli.mjs person",
     "done": "node ../../scripts/main-agent-cli.mjs done",
     "telegram": "node ../../scripts/main-agent-cli.mjs telegram",

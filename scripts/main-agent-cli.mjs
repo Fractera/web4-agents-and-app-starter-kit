@@ -20,6 +20,7 @@
 //   role <id> "<фраза>"      — назначить элементу роль (`data/node/roles.json`)
 //   supervise <id> main|architect|off [--max N] — кто ведёт элемент
 //   close <id>               — выключить агента элемента (548-20: включает поручение под надзором, выключает главный агент)
+//   trust <id> [<id> …]      — человек согласился: агент элемента работает в своей папке (604, вопрос доверия Claude Code)
 //   person                   — как связаться с архитектором из этой сессии (Telegram главного агента или терминал ядра)
 //   done [--close] [--note "<строка>"] — сказать узлу «закончил» (или закрыть свою сессию) без чтения ключей узла; `--note` — где
 //                              остановился, с неё начнётся твоя следующая сессия (595-7)
@@ -339,6 +340,21 @@ if (cmd === 'close') {
   process.exit(b.ok || b.reason === 'no-session' ? 0 : 1)
 }
 
+// 604 (владелец 2026-10-26: «Достаточно будет просто отправить запрос … пользователи говорить да хоккей подтверждаю и всё»): человек
+// согласился в твоём чате, чтобы агент элемента работал в своей папке, — ответить на вопрос Claude Code за него тем же нажатием.
+// Только после его согласия; вопрос задаёт узел, Claude Code помнит ответ навсегда.
+if (cmd === 'trust') {
+  if (!rest.length) fail('trust <id> [<id> …]')
+  let bad = 0
+  for (const id of rest) {
+    const r = await core('/api/agents/trust', { method: 'POST', body: JSON.stringify({ service: id }) }).catch((e) => fail(`the core did not answer: ${e.message}`))
+    const b = r.body ?? {}
+    if (b.ok) console.log(`===TRUST_OK=== ${id}: its folder is trusted, the agent goes on`)
+    else { bad++; console.log(`===TRUST_FAIL=== ${id}: ${b.reason === 'not-waiting' ? 'no folder question on its screen (already answered?)' : b.reason === 'no-session' ? 'its agent is not on' : b.reason ?? r.status}`) }
+  }
+  process.exit(bad ? 1 : 0)
+}
+
 // 552-6 (владелец 2026-10-20: «если ядро решила написать человеку через Messenger она должна сумме это сделать»): боты элемента и
 // сообщение тем, кто допущен к одному из них по ссылке. Ячейки: h2a — разговор человека с агентом элемента, h2h — люди через агентов,
 // orders — заказы элемента у других агентов, work — работа элемента для других агентов.
@@ -569,4 +585,4 @@ if (cmd === 'create') {
   process.exit(0)
 }
 
-fail(`unknown command «${cmd ?? ''}» — contacts | look | find | lagrix | create | task | state | role | supervise | close | person | done`)
+fail(`unknown command «${cmd ?? ''}» — contacts | look | find | lagrix | create | task | state | role | supervise | close | trust | person | done`)

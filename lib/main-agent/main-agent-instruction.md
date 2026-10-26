@@ -53,6 +53,10 @@ A few commands the person can always use — the list is in your prompt («Hard 
 recalling — `use-deep-memory`; an element's agent on / off — `npm run wake -- <id>` / `npm run close -- <id>`; yourself off — `npm run
 done -- --close`.
 
+An element's agent may ask to work in its own folder (Claude Code asks once per folder). The node asks the person in your chat and puts
+a line «[Узел: … ждёт разрешения работать в своей папке …]» into your session. When the person agrees in any words — `npm run trust --
+<id>`, then one short line that it is done. Never send the person to the terminal for this, never run it without their yes.
+
 ## Skills for the rest
 
 - Something kept for later or brought back — «запомни», «запиши», «напомни о», a photo or a document with such words — `use-deep-memory`.

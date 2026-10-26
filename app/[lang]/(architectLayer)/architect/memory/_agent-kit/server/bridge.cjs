@@ -309,11 +309,47 @@ function watchTrust(s) {
   s.trustTimer = setTimeout(() => {
     if (session.current(s.service) !== s || s.trustDone || !trustOnScreen(s.buffer)) return
     s.trustDone = true
-    if (!s.trustOk) { void telegram.tellWaiting(s.service).catch(() => {}); return }
-    try { s.proc.write('\x1b[B') } catch { return }
-    setTimeout(() => { try { s.proc.write('\r') } catch { /* процесс завершён */ } }, 250)
+    // 604: без согласия — вопрос в чат главного агента («Разрешить? да»), а не ссылка на терминал; ответ — `answerTrust`.
+    if (!s.trustOk) { void askTrust(s).catch(() => {}); return }
+    pressTrust(s)
   }, PROMPT_QUIET_MS)
   s.trustTimer.unref?.()
+}
+
+/** Нажать «Yes, I trust this folder» — стрелка вниз и Enter, как человек в терминале. */
+function pressTrust(s) {
+  try { s.proc.write('\x1b[B') } catch { return false }
+  setTimeout(() => { try { s.proc.write('\r') } catch { /* процесс завершён */ } }, 250)
+  return true
+}
+
+/**
+ * 604: спросить человека в чате главного агента. Главный агент сейчас работает — его бота читает плагин канала, и «да» придёт его
+ * модели: в его сессию вставляется строка узла, что за вопрос задан и какой командой ответить. Спящего главного агента «да» ловит
+ * его бот (`telegram.cjs`, `idleTick`), а другие слова будят его с той же строкой в тексте пробуждения.
+ */
+async function askTrust(s) {
+  const out = await telegram.tellTrust(s.service)
+  if (!out || !out.trust) return
+  const main = session.current('build')
+  if (!main || main === s) return
+  const id = s.service.replace(/--.*$/, '')
+  pasteWhenReady(main, `[Узел: агент ${id} ждёт разрешения работать в своей папке — человека только что спросили в Telegram «Разрешить? да». Если человек соглашается, в любых словах, выполни npm run trust -- ${id} и коротко скажи ему, что готово; без его согласия не выполняй.]`, { quietMs: 1500 })
+}
+
+/**
+ * 604: ответ человека «да» на вопрос доверия — дверь `POST /api/agents/trust`, команда главного агента `npm run trust`, спящий бот.
+ * Нажимает только когда вопрос действительно на экране этой сессии; иначе честное «не ждёт».
+ */
+function answerTrust(key) {
+  const s = session.current(key)
+  if (!s) { telegram.clearTrust(key); return { ok: false, reason: 'no-session' } }
+  if (!trustOnScreen(s.buffer)) { telegram.clearTrust(key); return { ok: false, reason: 'not-waiting' } }
+  if (!pressTrust(s)) return { ok: false, reason: 'gone' }
+  s.trustOk = true
+  telegram.clearTrust(key)
+  console.log(`[agents/trust] ${key}: папка подтверждена ответом человека`)
+  return { ok: true, trusted: key }
 }
 
 /**
@@ -719,4 +755,4 @@ function onConnection(ws, service) {
   }
 }
 
-module.exports = { onConnection, spawnAgent, wake, done, finishRule, shellPath, shellEnv, ptyLoadError: () => ptyLoadError, hasPty: () => pty !== null }
+module.exports = { onConnection, spawnAgent, wake, done, answerTrust, finishRule, shellPath, shellEnv, ptyLoadError: () => ptyLoadError, hasPty: () => pty !== null }
