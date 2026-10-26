@@ -3869,7 +3869,29 @@ request, no element or template edited. A working-process session (`<id>--work`)
 - Measured: the main agent's steady request ≈ +2.5k tokens (≈ 32–34k → 34.5–37k); the search by meaning ≈ 2 s before a message, an
   element without vectors ≈ 0.05 s; a six-language check set 21 of 24 (0 noise, words 7 of 24); the owner's live check in Telegram
   (595-10) — the start, skills on the furniture example, the truck by meaning, «как работает твоя память» — worked.
-- 🛑 Not built: the deep memory on «запомни» / «напомни о» (an element on `fractera-memory-starter`, steps 596–597), the skills base
-  delivered with every clone (598). Found on the way: the main agent carries the 22 claude-in-chrome tools whole (≈ 8–9k tokens per
+- 🛑 Not built: the commands «запомни» / «напомни о» to the deep memory (597; the element itself is built — step 596 below), the skills
+  base delivered with every clone (598). Found on the way: the main agent carries the 22 claude-in-chrome tools whole (≈ 8–9k tokens per
   request) — `ToolSearch` is not in its `--tools` (`.claude/launch-tools.txt`), and without it MCP tools load upfront (code.claude.com,
   mcp) — the owner decides.
+
+## The deep memory: the native element memory over the data layer (step 596, 2026-10-26)
+
+The owner (step 596): «ничего не мешает нам установить эту память как нативный элемент»; the plan ran without a window — his word of
+2026-10-26: «all next steps go to finish non stop , not ask me , your best choosse will is prefer, i go to sleep».
+- **The element** `memory` — `WEB4-ITEMS/core/memory`, port 24690, `Fractera/fractera-memory-starter` v2.0.1 (the same repository; its
+  history goes on over the native template v0.1.28). The contract of the former memory: `POST /v1/remember | recall | feedback`,
+  `GET /v1/state | sources | journal | signals | objects/{id}[/file] | contract | health`. The lock: the node key (`X-Node-Key`) or the
+  node's data secret; through the tunnel — 404; `health` is open. Its README says how to call it and what it cannot do.
+- **Off by its passport** («Turned on for a memory task: «запомни» and «напомни о» — the main agent turns it on and off»): on, it holds
+  103 MB plus a watchdog of 41 MB. `npm run element:power -- memory on`; `off "<reason>"` (off without a reason is refused).
+- **It keeps everything in the node's data layer:** the table `messages_that_came_into_memory` (data); vectors `memory-said`,
+  `memory-feedback`, `memory-objects` (vectors — the memory counts them itself in the vector element's model, the core's OpenAI key
+  first); a ready graph in its own space `memory` of the graph element (`space`, graph v1.1.15 — a person's facts never mix with the skills
+  of 595-3 or the studies of 590); things — storage. It thinks with `claude -p` on Sonnet: one phrase ≈ 4.2k input tokens (3.2k from the
+  cache) and 721 output, ≈ $0.012 by the CLI's estimate; every call's price is in its journal `data/services/memory/memory-log.md`.
+- **In the core:** the section `architect/memory` (port, live preview, the agent kit) in the Memory group after the fast store; point 3 of
+  `lib/agent-kit/memory/memory.md` says the element is built and off until a memory task; «Проекты» show it off with its reason.
+- `npm run check:modes`: a native element needs no study pass file — native elements have no study pass (594-7; ✗ memory, the first
+  element on native v0.1.28, turned the guard red; 7b900db).
+- 🛑 Not built: reading links (pages, YouTube) — an honest refusal `links-not-built-on-node`; video without ffmpeg —
+  `describe-ffmpeg-failed`; the graph cannot forget; the main agent's commands «запомни» / «напомни о» — step 597.
