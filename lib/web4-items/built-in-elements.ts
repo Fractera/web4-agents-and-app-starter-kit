@@ -27,8 +27,10 @@ export const BUILT_IN_STATIC: Record<string, string> = {
 export const MEMORY_ELEMENTS: readonly string[] = ["data", "storage", "vectors", "graph"]
 
 /** 560-2 (владелец 2026-10-21: «раздел память раскрывающийся внутри которого было бы пять этих элементов»): группа «Память» левого
- *  меню, в этом порядке. Резервное копирование — по-прежнему `MEMORY_ELEMENTS`: быстрое хранилище — буфер, правда в data. */
-export const MEMORY_GROUP: readonly string[] = ["data", "storage", "vectors", "graph", "cache"]
+ *  меню, в этом порядке. Резервное копирование — по-прежнему `MEMORY_ELEMENTS`: быстрое хранилище — буфер, правда в data.
+ *  596-6: шестой — глубокая память `memory` (fractera-memory-starter): своих хранилищ у неё нет, она пишет в четыре первых, поэтому
+ *  и в резервное копирование не входит. */
+export const MEMORY_GROUP: readonly string[] = ["data", "storage", "vectors", "graph", "cache", "memory"]
 
 /** 559: элемент входа — у него раздел «Пользователи» (`auth` в дереве), все люди узла. */
 export const AUTH_ELEMENT = "auth"

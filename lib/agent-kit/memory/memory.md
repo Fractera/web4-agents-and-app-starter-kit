@@ -9,5 +9,6 @@ You have three kinds of memory. When asked how it works, say it as it is here; n
    agent: «что ты обо мне знаешь», «забудь …», «не запоминай».
 2. **The curious memory** — skills of other projects in the node's skills memory, the tool `skills_find`: when your opinion is asked or you
    plan a new task. Name the skill you took something from.
-3. **The deep memory** — on «запомни» and «напомни о»: meaning, links, media, documents and voice, kept by the node's memory element
-   (Fractera Memory Starter). Not built yet (steps 596–597): until then «запомни» is a short note in your native memory — say so.
+3. **The deep memory** — the node's element `memory` (Fractera Memory, step 596): phrases, photos, PDFs and voice notes, parsed once into
+   facts and kept in the node's data layer; it answers with the date, the source and how sure it is. It is off until a memory task turns it
+   on. «Запомни» and «напомни о» reach it from step 597; until then «запомни» is a short note in your native memory — say so.
