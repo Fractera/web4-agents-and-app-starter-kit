@@ -1,0 +1,162 @@
+{
+  "about": "The skills base shipped with every clone of the node (node step 598): npm run skills -- base-sync | base-check | base-load.",
+  "skills": [
+    {
+      "source": "blader",
+      "skill": "humanizer",
+      "license": "MIT",
+      "url": "https://github.com/blader/humanizer",
+      "version": "3.1.0",
+      "sha": "0612f1dfb1672b0e",
+      "files": [
+        "LICENSE",
+        "SKILL.md",
+        "SOURCE.md"
+      ]
+    },
+    {
+      "source": "coreyhaines",
+      "skill": "copy-editing",
+      "license": "MIT",
+      "url": "https://github.com/coreyhaines31/marketingskills",
+      "version": "",
+      "sha": "9b5a20be3dc5513c",
+      "files": [
+        "LICENSE",
+        "SKILL.md",
+        "SOURCE.md",
+        "references/checklist.md",
+        "references/content-refresh.md",
+        "references/plain-english-alternatives.md"
+      ]
+    },
+    {
+      "source": "coreyhaines",
+      "skill": "copywriting",
+      "license": "MIT",
+      "url": "https://github.com/coreyhaines31/marketingskills",
+      "version": "",
+      "sha": "ce18137ae31ab37f",
+      "files": [
+        "LICENSE",
+        "SKILL.md",
+        "SOURCE.md",
+        "references/copy-frameworks.md",
+        "references/natural-transitions.md"
+      ]
+    },
+    {
+      "source": "googlemaps",
+      "skill": "google-maps-platform",
+      "license": "Apache-2.0",
+      "url": "https://github.com/googlemaps/agent-skills",
+      "version": "",
+      "sha": "89d8c23047e06ceb",
+      "files": [
+        "LICENSE",
+        "SKILL.md",
+        "SOURCE.md"
+      ]
+    },
+    {
+      "source": "leonxlnx",
+      "skill": "design-taste-frontend",
+      "license": "MIT",
+      "url": "https://github.com/Leonxlnx/taste-skill",
+      "version": "",
+      "sha": "aa194351b246b8b4",
+      "files": [
+        "LICENSE",
+        "SKILL.md",
+        "SOURCE.md"
+      ]
+    },
+    {
+      "source": "morluto",
+      "skill": "reverse-engineer-anything",
+      "license": "MIT",
+      "url": "https://github.com/morluto/rea",
+      "version": "",
+      "sha": "8818b645c9fd3483",
+      "files": [
+        "LICENSE",
+        "SKILL.md",
+        "SOURCE.md",
+        "references/android-applications.md",
+        "references/connection-and-recovery.md",
+        "references/environments.md",
+        "references/evidence-workflows.md",
+        "references/javascript-applications.md",
+        "references/native-and-artifacts.md",
+        "references/runtime-observation.md"
+      ]
+    },
+    {
+      "source": "pbakaus",
+      "skill": "impeccable",
+      "license": "Apache-2.0",
+      "url": "https://github.com/pbakaus/impeccable",
+      "version": "4.4.0",
+      "sha": "23a81333bef9efcf",
+      "files": [
+        "LICENSE",
+        "NOTICE.md",
+        "SKILL.md",
+        "SOURCE.md",
+        "reference/adapt.md",
+        "reference/adapt.native.md",
+        "reference/android.md",
+        "reference/animate.md",
+        "reference/audit.md",
+        "reference/audit.native.md",
+        "reference/bolder.md",
+        "reference/clarify.md",
+        "reference/colorize.md",
+        "reference/component-review.md",
+        "reference/craft-floor.md",
+        "reference/craft.md",
+        "reference/critique.md",
+        "reference/delight.md",
+        "reference/distill.md",
+        "reference/doctor.md",
+        "reference/document.md",
+        "reference/extract.md",
+        "reference/generate.md",
+        "reference/harden.md",
+        "reference/hooks.md",
+        "reference/init.md",
+        "reference/ios.md",
+        "reference/layout.md",
+        "reference/live-setup.md",
+        "reference/live.md",
+        "reference/new-work.md",
+        "reference/onboard.md",
+        "reference/operate.md",
+        "reference/optimize.md",
+        "reference/overdrive.md",
+        "reference/polish.md",
+        "reference/quieter.md",
+        "reference/region-map.md",
+        "reference/routing.md",
+        "reference/shape.md",
+        "reference/typeset.md",
+        "reference/visualize.md"
+      ]
+    },
+    {
+      "source": "stripe",
+      "skill": "stripe-best-practices",
+      "license": "MIT",
+      "url": "https://github.com/stripe/ai",
+      "version": "",
+      "sha": "a240f40c84c43f8c",
+      "files": [
+        "LICENSE",
+        "SKILL.md",
+        "SOURCE.md",
+        "references/payments.md",
+        "references/security.md"
+      ]
+    }
+  ]
+}
