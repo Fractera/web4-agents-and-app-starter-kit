@@ -3984,3 +3984,45 @@ OpenAI key and why the Anthropic subscription cannot replace it, then continuous
   errors; kit changes were brought up by `pm2 restart` only. Now `lib/agent-kit/mount.cjs` puts the module on
   `globalThis.__web4NodeCommands`, and `check:agent-kits` (in `prebuild`) walks from the doors' imports through `require('./…')` and
   refuses a require of a computed path (core 43fc35b). After a kit change brought up by a restart — `npm run prebuild` all the same.
+
+## «How it works» holds the memory and evolution sections; the tabs «Native elements» and «Custom elements» (step 600, 2026-10-26)
+
+- The sections «Deep memory and a curious soul» (5) and «Continuous evolution» (6) moved from the entrance `/<lang>/architect` to
+  `/<lang>/passport/how-it-works` (`_data/memory-sections.ts`), with tabs as the table of contents (`tabsOf`, the optional `tabs` of
+  `_lib/collection-page.tsx`); the entrance keeps «Start · Glossary» only (owner: «Ничего»). Every glossary word of the page opens its hint,
+  found in the text by the page itself (600-5).
+- The architect header: «Native elements» and «Custom elements» instead of «All projects» (owner: «корректное название нативные элементы»).
+- 🛑 Before a core rebuild — no background command walking `agi-code`: a recursive grep held `WEB4-ITEMS` for 42 minutes and the closed lid
+  (553) failed three times with EPERM moving the folder.
+
+## The deep memory stays on while more than 1 GB is free (step 601, 2026-10-26)
+
+Owner: «Если свободной памяти больше чем 1 ГБ я хочу чтобы навык глубокой памяти был включён всегда». `scripts/memory-by-free.mjs` runs
+60 s after the core starts (`instrumentation.ts`, through `spawn-free`) and after a core build: above 1024 MB free and off → on (`powerAuto`);
+at or below and turned on by this rule → off with the reason; otherwise untouched. Journal `logs/memory-by-free.log`, state
+`data/node/memory-by-free.json`. 🛑 Measured at start, free memory is high (1722 MB) and falls once services warm (263 MB 25 min later) —
+the moment of measuring is the owner's choice.
+
+## The memory element's home page is the landing of the deep memory (step 602, 2026-10-26)
+
+`memory.throughsongs.com` — memory v2.2.1, widget `widget-static-memory-landing` built like the Stripe element's home page (a bare page drawn
+from its own en/ru blocks; README in the widget folder). Every sentence was matched against the element's code; a new claim gets the same
+check. 🛑 A new public widget needs `markdown.ts` and a line in `_widgets/markdown.ts`, or `check:aio` stops its deploy.
+
+## The main agent knows its node and builds no duplicates (step 603, 2026-10-26)
+
+`lib/a2a/self-description.cjs`: `npm run card -- <id>` is the passport plus what is measured (doors from every route, data on disk,
+process memory, who depends on it, «reachable only inside this node»); `contacts --all`; `find` by meaning through the vectors element
+(collection `node-elements`, threshold 0.21 — 29 of 30 intents first, 6 absent ≤ 0.193; measure again as the node grows); `create` stops on a
+similar element until `--different`. The main agent names the process only when work begins and is not asked «turn it off?» after every
+answer. 🛑 `/api/health` `commit` is the process's `WEB4_COMMIT`, not the build — «the code is built» is proven by `builtAt`.
+
+## The folder trust question goes to the main agent's chat (step 604, 2026-10-26)
+
+Owner: «пользователи могли поставить один единственный Telegram бот для главного агента … вопрос задается один раз в случае подтверждения
+больше не повторяется». An element agent turned on without the «Turn on» button stops on Claude Code's «Is this a project you trust?». The
+bridge (`askTrust`) asks the main agent bot's allowed chats «Agent … asks to work in its own folder … Allow? Reply «yes».»; pending questions
+— `data/node/trust-pending.json`. A sleeping main agent bot takes a short yes itself (`trustYes`); other words wake the main agent with the
+question in its prompt; a live main agent gets a node line in its session and runs `npm run trust -- <id>` (door `POST /api/agents/trust`,
+node key). The bridge presses «Yes, I trust this folder» only when the question is on that session's screen. No main agent bot — the old
+link to the terminal. 🛑 Never answer for the person: `trust` only after their yes.
