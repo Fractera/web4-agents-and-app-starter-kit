@@ -1,64 +1,47 @@
-# development-docs — реестр документов разработки
+# development-docs — the register of development documents
 
-Указатель на всё, что этот узел знает о собственной постройке. Один документ — одна строка: имя, когда
-открывают, что внутри.
+A pointer to everything this node knows about how it is built. One document — one line: its name, when it is opened, what is inside.
+A line appears here in THE SAME edit that creates the document: a register filled in «later» stops being one by its second document,
+and the missing line gives itself away nowhere.
 
-🔒 **ЗАПОЛНЕН 2026-09-19 (шаг 244-3): файл существовал и был ПУСТ — ноль байт.** Пустой указатель хуже
-отсутствующего: он выглядит проверенным. Найдено прямой проверкой владельца — он спросил, существует
-ли у нас этот документ в реестре документов разработки и описана ли практика в архитектуре.
+## Documents
 
-## Документы
-
-| Документ | Когда открывают | Что внутри |
+| Document | When it is opened | What is inside |
 |---|---|---|
-| [`ANTI-PATTERNS.md`](ANTI-PATTERNS.md) | **раз в сессию, до первой сборки** | подходы, оказавшиеся тупиками: симптом, механизм, лечение |
-| [`TRANSLATION-DEBT.md`](TRANSLATION-DEBT.md) | делая способность со словами для человека | что живёт на неполном наборе языков и почему; порядок одноязычной разработки |
-| [`PASSPORT.md`](PASSPORT.md) | когда узел рассказывает о себе другим | 🛑 **ПУСТ на 2026-09-19** — файл есть, содержимого нет. Паспорт узла (кто он, что умеет, чем торгует) придёт со своим шагом; до тех пор брать сведения отсюда нельзя |
-| [`API-MAP.md`](API-MAP.md) | когда узел зовут снаружи или он зовёт соседа | карта дверей: что отвечает и кому |
-| [`GLOSSARY.md`](GLOSSARY.md) | встретив незнакомое слово — **раньше, чем начнёте гадать** | слова проекта; одноимённые сущности разных слоёв различаются здесь |
-| [`BACKLOG.md`](BACKLOG.md) | когда всплыла названная в нём область | построенное наполовину, обещанное, необъяснённое. **Никогда при старте сессии** |
-| [`CANCELLED.md`](CANCELLED.md) | встретив закон, которого больше нет | отменённые решения: что отменено, когда и чем заменено |
-| [`development-steps/`](development-steps/) | **первым в каждой сессии** | `current-steps.md` — где работа сейчас; планы, итоги, приёмная заявок |
-| [`reports/`](reports/) | когда нужен подробный разбор | `errors-…` — один отказ целиком; `feature-…` — законченная способность |
+| [`ANTI-PATTERNS.md`](ANTI-PATTERNS.md) | before a core rebuild, before moving folders, before work with processes and ports | dead ends already paid for: symptom, cause, cure |
+| [`TRANSLATION-DEBT.md`](TRANSLATION-DEBT.md) | building a capability with words for a person | what lives on an incomplete set of languages and why; read by the guard `check-content` — its format is a contract |
+| [`API-MAP.md`](API-MAP.md) | when the node is called from outside or calls a neighbour | the map of doors; built by `npm run build:api-map`, never edited by hand |
+| [`GLOSSARY.md`](GLOSSARY.md) | meeting an unknown word — **before guessing** | the project's words; same-named things of different layers are told apart here |
+| [`BACKLOG.md`](BACKLOG.md) | when the area it names comes up — **never at session start** | half-built, promised, unexplained work of this node; arrives empty |
+| [`CANCELLED.md`](CANCELLED.md) | meeting a rule that is gone | what was cancelled, when, and what replaced it; arrives with this node's own entries only |
+| [`development-steps/`](development-steps/) | **first in every session** | `current-steps.md` — where the work is now; plans, outcomes, the inbox of requests (its `README.md`) |
+| [`reports/`](reports/) | when a detailed analysis is needed | `errors-…` — one failure in full; `feature-…` — a finished capability |
 
-🔒 **Строка появляется здесь ТОЙ ЖЕ правкой, что создаёт документ.** Реестр, который дописывают
-«потом», перестаёт быть реестром на втором документе — и заметить это нельзя: отсутствие строки ничем
-себя не выдаёт.
+The node's passport (who it is, what it can do) is not a file here: it is the Passport group of pages (`/architect/passport`), built from
+the registry and the elements' own passports.
 
-## 🔒 У каждого документа есть своя страница в слое архитектора (255-2, 2026-09-19)
+## Every document has its own page in the architect layer (255-2, 2026-09-19)
 
-Решение владельца, дословно: «на вкладке строительства в документации у нас не хватает нескольких
-важных документов: **глоссарий** — документ, в котором пользователь и агент договариваются о
-переиспользовании определённых навыков · **антипаттерны** — он накапливает то, чего агент не должен
-делать · **долги по переводам** — документ, который накапливает информацию о ссылках на компоненты и
-функции страницы и прочие данные, которые не получили перевод».
+The owner's decision: a document the agent keeps must be visible to the person as a page, not only as a file in the repository — a document
+without a page is read only by whoever knows its path. File and page are two halves of one piece of knowledge: a new document gets its page
+in the same edit.
 
-Отсюда закон: **документ, который ведёт агент, обязан быть виден человеку страницей**, а не только
-файлом в репозитории. Документ без страницы читает лишь тот, кто знает путь; для владельца узла его
-не существует.
-
-| Документ | Его страница |
+| Document | Its page |
 |---|---|
 | `GLOSSARY.md` | `/architect/build/glossary` |
 | `ANTI-PATTERNS.md` | `/architect/build/anti-patterns` |
 | `TRANSLATION-DEBT.md` | `/architect/build/translation-debt` |
-| этот реестр | `/architect/build/docs-registry` |
+| this register | `/architect/build/docs-registry` |
 | `BACKLOG.md` | `/architect/build/backlog` |
 | `CANCELLED.md` | `/architect/build/cancelled` |
 | `API-MAP.md` | `/architect/build/api-map` |
-| `PASSPORT.md` | группа `/architect/passport` целиком |
 | `development-steps/` | `steps-new` · `steps-done` · `step-current` · `task-add` |
 
-🛑 **ЗАВОДЯ НОВЫЙ ДОКУМЕНТ, ЗАВОДИ И ЕГО СТРАНИЦУ — ОДНОЙ ПРАВКОЙ.** Тот же закон, что строкой выше,
-только для второй половины: файл и страница суть две половины одного знания, и расходятся они молча.
+**Single-language development is a rule, not carelessness:** a capability is written in ONE language and translations run as a separate
+cycle, often on a cheaper model. `TRANSLATION-DEBT.md` is the working organ of that cycle: it keeps the addresses of what waits for
+translation.
 
-🔒 **ОДНОЯЗЫЧНАЯ РАЗРАБОТКА — ПРАВИЛО, А НЕ НЕБРЕЖНОСТЬ** (пояснение владельца там же): способность
-пишется на ОДНОМ языке, а переводы запускаются отдельным циклом, часто моделью подешевле. Поэтому
-`TRANSLATION-DEBT.md` не «список недоделок», а рабочий орган этого цикла: он копит адреса того, что
-ждёт перевода, и без него второй заход не знает, куда идти.
+## What is not here on purpose
 
-## Чего здесь нет намеренно
-
-Инструкция агента (`CLAUDE.md` в корне) в реестр не входит: её читает программа, автоматически, по
-самому факту нахождения в рабочей папке. Это не документ о разработке, а личность того, кто разработку
-ведёт.
+The agent's instruction (`CLAUDE.md` in the root) is not in this register: a program reads it automatically, by the mere fact that it lies
+in the working folder. It is not a document about development but the identity of whoever develops.

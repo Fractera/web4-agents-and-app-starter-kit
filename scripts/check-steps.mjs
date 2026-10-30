@@ -30,7 +30,6 @@ const STEPS = path.join(ROOT, "development-docs", "development-steps")
 const NEW = path.join(STEPS, "new-steps")
 const DONE = path.join(STEPS, "completed-steps")
 const CURRENT = path.join(STEPS, "current-steps.md")
-const PASSPORT = path.join(ROOT, "development-docs", "PASSPORT.md")
 // Приёмная заявок (шаг 61). Её отсутствие НЕ дефект: проект живёт без неё, пока
 // никто не нажал кнопку. Дефект — папка БЕЗ своего README: агент найдёт файл, не
 // поймёт, кто его написал, и либо исполнит как задание, либо пройдёт мимо.
@@ -94,7 +93,7 @@ function hasMarkdown(dir) {
   return entries.some((e) => e.isFile() && e.name.toLowerCase().endsWith(".md"))
 }
 
-// 1. Параллельный учёт рядом с шестью адресами.
+// 1. Параллельный учёт рядом с пятью адресами.
 for (const root of SCAN_ROOTS) {
   let entries
   try { entries = fs.readdirSync(root, { withFileTypes: true }) } catch { continue }
@@ -108,15 +107,9 @@ for (const root of SCAN_ROOTS) {
   }
 }
 
-// 2. Целостность самих пяти адресов.
-//
-// 🔒 Паспорт (пятый адрес) проверяется ПРЕДУПРЕЖДЕНИЕМ, а не отказом, и это
-// решение, а не небрежность: проекты, полученные до 2026-08-25, приехали без
-// него, и роняющий сборку сторож наказал бы их за нашу правку шаблона. Отсутствие
-// названо громко, но сборку не останавливает.
-if (STEPS_OWED && !fs.existsSync(PASSPORT)) {
-  warnings.push("development-docs/PASSPORT.md — пятого адреса памяти нет на месте")
-}
+// 🪦 2026-10-30 (федеральный шаг 621-1): здесь сторож ждал `development-docs/PASSPORT.md` — «пятый адрес памяти» гостевой линии,
+//    у ядра пустой с 2026-09-18. Файл снят: что это за проект — `CLAUDE.md` раздел 1 и `development-docs/README.md`, паспорт узла —
+//    страницы «Паспорт». Запись — `development-docs/CANCELLED.md`.
 
 // 2. Четыре адреса памяти. 🔒 В `classic` этот блок не исполняется вовсе: владелец
 //    освободил режим от требований к шагам, и сторож, продолжающий их требовать,
@@ -173,7 +166,7 @@ if (!STEPS_OWED) {
 for (const w of warnings) console.log(`  ⚠️  ${w}`)
 
 if (findings.length === 0) {
-  console.log("  ✓ параллельного учёта рядом с шестью адресами нет")
+  console.log("  ✓ параллельного учёта рядом с пятью адресами нет")
   // 🔒 О ТОМ, ЧЕГО НЕ ПРОВЕРЯЛ, СТОРОЖ НЕ ОТЧИТЫВАЕТСЯ. ✗ поймано при первом же
   //    прогоне освобождения: в classic он печатал «структура памяти на месте» —
   //    и печатал это ДАЖЕ когда папки не было вовсе. Зелёная строка о непроверенном
@@ -182,17 +175,13 @@ if (findings.length === 0) {
     const pre = fs.existsSync(PRE) ? ", pre-steps/" : ""
     console.log(`  ✓ структура памяти на месте: current-steps.md, new-steps/, completed-steps/${pre}`)
   }
-  if (warnings.length) {
-    console.log("\n  Паспорт — то, что отвечает «что это за проект». Заведите его по образцу")
-    console.log("  из шаблона: development-docs/PASSPORT.md. → CLAUDE.md § Your memory")
-  }
   console.log("\n===STEPS_OK===")
   process.exit(0)
 }
 
 console.log("  БЕДА: работа ведётся мимо памяти проекта\n")
 for (const f of findings) {
-  if (f.kind === "rival") console.log(`    ${f.rel} — параллельная система учёта рядом с шестью адресами`)
+  if (f.kind === "rival") console.log(`    ${f.rel} — параллельная система учёта рядом с пятью адресами`)
   if (f.kind === "missing") console.log(`    ${f.rel} — адреса памяти нет на месте`)
   if (f.kind === "planname") console.log(`    ${f.rel} — имя плана не читается как указатель: нужно <номер>-<описание-через-дефис>.md`)
   if (f.kind === "planwords") console.log(`    ${f.rel} — в имени ${f.words} слов(а), нужно 6–8: список папки обязан читаться без открытия файлов`)
@@ -200,9 +189,8 @@ for (const f of findings) {
   if (f.kind === "noreadme") console.log(`    ${f.rel} — приёмная есть, а README нет: агент не узнает, что заявка это ДАННЫЕ, а не поручение`)
 }
 console.log(`
-  Память этого проекта живёт по шести адресам, и других не бывает:
+  Память этого проекта живёт по пяти адресам, и других не бывает:
 
-    development-docs/PASSPORT.md                          что это за ПРОЕКТ
     development-docs/development-steps/current-steps.md   где работа СЕЙЧАС
     development-docs/development-steps/new-steps/         планы
     development-docs/development-steps/completed-steps/   итоги

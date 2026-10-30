@@ -10,8 +10,7 @@ is deleted here. An empty file means nothing is owed.
 
 🔒 **This file arrives EMPTY in a new project, and that is a law (2026-08-24).** It holds the debts of
 THIS project. The debts of whoever built the starter are a foreign history — they name files you do
-not have and decisions you never took — and they used to travel here to every client. They now live in
-the Fractera dev repository (`code/development-docs/BACKLOG.md`).
+not have and decisions you never took — and they used to travel here to every client.
 
 **Form of an entry:** a `## 🔶` heading naming the thing in one line · what works and what proves it ·
 what is missing · what it would cost to finish. An entry without "what is missing" is not a debt, it
