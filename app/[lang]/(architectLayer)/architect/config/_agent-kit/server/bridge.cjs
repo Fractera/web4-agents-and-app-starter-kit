@@ -125,6 +125,16 @@ function firstTaskPrompt(task, viaChannel) {
     `Start the work only after they answer yes.`
 }
 
+/**
+ * 615-1: хук сторожа медленного поиска главного агента (`lib/agent-kit/guard-search.cjs`) — exec-видом, как хуки памяти: путь с пробелом
+ * не ломается. Корень узла — аргументом: по нему сторож узнаёт тяжёлые места (корень, WEB4-ITEMS, node_modules).
+ */
+function guardHook() {
+  const file = path.join(process.cwd(), 'lib', 'agent-kit', 'guard-search.cjs')
+  if (!existsSync(file)) return null
+  return { matcher: 'Bash|PowerShell', hooks: [{ type: 'command', command: process.execPath, args: [file.replace(/\\/g, '/'), process.cwd().replace(/\\/g, '/')], timeout: 10 }] }
+}
+
 async function spawnAgent(service, notice = () => {}, wanted = () => true, firstPrompt = '', { answerTrust = false, pass = 'main', model: chosen, hold = false, callerTells = false } = {}) {
   if (!pty) {
     notice(`[терминал недоступен: node-pty не загружен — ${ptyLoadError}]`)
@@ -179,7 +189,10 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
   const memDir = typeof modes.memoryDir === 'function' ? modes.memoryDir(element) : null
   // 595-6: the diary hooks (Stop, SessionEnd) ride in the same --settings; a working-process session gets none.
   const memHooks = typeof modes.memoryHooks === 'function' ? modes.memoryHooks(element, mode) : null
-  const mem = { ...(memDir ? { autoMemoryDirectory: memDir } : {}), ...(memHooks ? { hooks: memHooks } : {}) }
+  // 615-1 (✗ 2026-10-30 13:22: `find .` из корня ядра — 2 минуты молчания в Telegram): главному агенту — сторож медленного поиска.
+  const guard = element === MAIN_AGENT ? guardHook() : null
+  const hooks = guard ? { ...(memHooks ?? {}), PreToolUse: [...(memHooks?.PreToolUse ?? []), guard] } : memHooks
+  const mem = { ...(memDir ? { autoMemoryDirectory: memDir } : {}), ...(hooks ? { hooks } : {}) }
   const ownData = path.join(process.cwd(), 'data', 'services', element)
   if (existsSync(ownData) && !args.includes(ownData)) args = ['--add-dir', ownData, ...(args.length ? args : ['--permission-mode', 'auto'])]
   // 569-3: свои встроенные инструменты папки агента (`.claude/launch-tools.txt`, `lib/agent-kit/modes.cjs`). 🛑 `--tools` забирает СПИСОК
