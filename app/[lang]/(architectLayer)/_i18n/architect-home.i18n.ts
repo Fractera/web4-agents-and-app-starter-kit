@@ -17,7 +17,8 @@
 //
 // 🔒 АДРЕС ДЕЙСТВИЯ — ПУТЬ ОТ КОРНЯ ЯДРА БЕЗ ЯЗЫКА И БЕЗ `/architect` (285-6): язык подставляет страница.
 // 594-6: «Используйте реверс-инжиниринг» ведёт на страницу разбора root (`/root/reverse-engineering`): прежняя `/reverse` снята вместе
-// с элементом reverse (594-2), разбор теперь ведёт агент элемента в своём проходе, а root есть на каждом узле.
+// с элементом reverse (594-2), разбор теперь ведёт агент элемента в своём проходе, а root есть на каждом узле. 606: у root стандартное
+// дерево кастомного элемента — страница разбора там `/root/product-design/reverse-engineering`.
 //
 // 🔒 ПОДСКАЗКИ К СЛОВАМ (599-1, владелец 2026-10-26: «добавить тултип и подсветить подсказки элемент, узел и так далее, все что у нас
 // есть в глоссари … так как эта страница первого контакта и при это много новых слов»). Ликбез — единственный список определений: в
@@ -70,7 +71,7 @@ const DICT: Record<string, ArchitectHomeUi> = {
         {
           title: 'Use [[reverse engineering|reverse-engineering]]',
           text: 'Take apart how popular products work, then build your own on their business ideas and technical solutions.',
-          path: '/root/reverse-engineering',
+          path: '/root/product-design/reverse-engineering',
           label: 'Open',
         },
       ],
@@ -123,7 +124,7 @@ const DICT: Record<string, ArchitectHomeUi> = {
         {
           title: 'Используйте [[реверс-инжиниринг|reverse-engineering]]',
           text: 'Разберите, как устроены популярные продукты, и постройте своё на их бизнес-идеях и технических решениях.',
-          path: '/root/reverse-engineering',
+          path: '/root/product-design/reverse-engineering',
           label: 'Открыть',
         },
       ],

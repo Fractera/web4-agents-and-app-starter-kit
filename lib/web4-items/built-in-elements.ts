@@ -46,5 +46,8 @@ export function builtInIds(): string[] {
 
 /** Запись элемента для страницы дерева — у встроенного черновика нет. */
 export function builtInDraft(id: string): Web4Draft | null {
+  // 606: root — кастомный элемент реестра без черновика: то же дерево, что у lagrix, и общий маршрут architect/[item]; своей группы
+  // `architect/root` у него больше нет, агента обслуживает общая копия комплекта (606-1).
+  if (id === "root" && listServices().some((s) => s.id === "root")) return { id, createdAt: "" } as Web4Draft
   return builtInIds().includes(id) ? ({ id, createdAt: "" } as Web4Draft) : null
 }

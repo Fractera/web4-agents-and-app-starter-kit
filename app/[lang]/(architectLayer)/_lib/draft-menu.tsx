@@ -5,7 +5,7 @@ import { addressOf } from '@/lib/web4-items/element-address'
 import { ITEM_TREE, treeLang, treeVisible, type TreePage } from '@/lib/web4-items/item-tree'
 import { elementPassport, hasCatalog, isNativeElement } from '@/lib/a2a/element-passport'
 import { treeContextOf } from '@/lib/web4-items/tree-context'
-import { BUILT_IN_STATIC, MEMORY_GROUP, builtInIds } from '@/lib/web4-items/built-in-elements'
+import { BUILT_IN_STATIC, MEMORY_GROUP, builtInDraft, builtInIds } from '@/lib/web4-items/built-in-elements'
 import { hasDoc } from '@/lib/web4-items/element-docs'
 import { web4DraftsUi } from '../_i18n/web4-drafts.i18n'
 import { CreateDraftButton } from '../_components/create-draft-button.client'
@@ -110,24 +110,22 @@ export function withDrafts(menu: WorkspaceItem[], lang: string, currentPath: str
   const strip = ({ native: _native, ...item }: WorkspaceItem & { native: boolean }): WorkspaceItem => item
   const natives = drafts.filter((d) => d.native).map(strip)
   const customs = drafts.filter((d) => !d.native).map(strip)
+  // 606 (владелец 2026-10-30: «…в левом меню ядра существует старый интерфейс не такой как у стандартов в нормальных кастомных
+  // элементов»; этап 9 — «Кастомный, план подтверждаю»): root — элемент реестра, не черновик; его дерево строится тем же `treeItem`, что у
+  // lagrix, первой строкой кастомной зоны, выше кнопки создания. Нет root в реестре — нет и пункта.
+  const rootTree = builtInDraft('root') ? [strip(treeItem({ id: 'root' }, false))] : []
   const page = at(currentPath)
-  const customZone = [button, ...customs]
-  const withCustom = [...menu.slice(0, cut), ...natives, zone(ui.zoneCustom, 'custom', holds(customs, page)), ...inZone(customZone, 'custom'), ...menu.slice(cut)]
+  const customZone = [...rootTree, button, ...customs]
+  const withCustom = [...menu.slice(0, cut), ...natives, zone(ui.zoneCustom, 'custom', holds(customZone, page)), ...inZone(customZone, 'custom'), ...menu.slice(cut)]
   // Нет пункта «Ядро» — первой зоны нет: подпись над пустотой хуже её отсутствия.
   const c = withCustom.findIndex((m) => m.href === at(`${ARCHITECT_HOME}/${CORE}`))
   if (c < 0) return withCustom
   // Зона «Нативные» — от «Ядра» до подписи «Кастомные».
   const end = withCustom.findIndex((m) => m.zoneHead?.id === 'custom')
-  // 586 (владелец 2026-10-24): «Root элемент это по своей природе кастомный элементы … перенеси его в группу выпадающего списка для
-  // кастомных элементов и закрепи его первым». Пункт Root приходит из меню папок между «Ядром» и подписью «Кастомные» — вынимается
-  // из зоны нативных и встаёт первой строкой кастомной зоны (выше кнопки «Создать WEB4 ITEM»).
-  const rootHref = at(`${ARCHITECT_HOME}/root`)
-  const rootItem = withCustom.slice(c + 1, end).find((m) => m.href === rootHref)
-  const nativeZone = withCustom.slice(c + 1, end).filter((m) => m !== rootItem)
-  const tail = withCustom.slice(end)
-  const customTail = rootItem
-    ? [zone(ui.zoneCustom, 'custom', holds([rootItem, ...customs], page)), { ...rootItem, zone: 'custom' }, ...tail.slice(1)]
-    : tail
+  // 586 (владелец 2026-10-24): Root — кастомный элемент, первой строкой кастомной зоны. С 606 он строится выше деревом; вынимать его из
+  // папок меню больше не нужно: старая группа `architect/root` снята.
+  const nativeZone = withCustom.slice(c + 1, end)
+  const customTail = withCustom.slice(end)
   // 560-2: элементы памяти — подзона «Память» на месте первого из них; их пункты остаются первым уровнем (глубина деревьев не теряется).
   const memHref = new Map(MEMORY_GROUP.map((id, k) => [at(`${ARCHITECT_HOME}/${addressOf(id)}`), k] as const))
   const memory = nativeZone.filter((m) => m.href && memHref.has(m.href)).sort((a, b) => memHref.get(a.href!)! - memHref.get(b.href!)!)

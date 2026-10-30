@@ -80,6 +80,16 @@ export const MOVED_PAGES: Record<string, string> = {
   "build/product-design/from-framework": "product-design/reverse-engineering",
   "product-design/from-nextjs": "product-design/reverse-engineering",
   "product-design/from-framework": "product-design/reverse-engineering",
+  // 606: страницы старой группы `architect/root` (снята) ведут в дерево; у других элементов таких адресов нет. Текст из `?paste=` при
+  // переадресации теряется — источник ссылок на терминал root исправлен в 606-1 (`terminalServiceOf`).
+  "terminal": "build/terminal",
+  "claude-code": "build/subscription",
+  "telegram": "build/telegram",
+  "reverse-engineering": "product-design/reverse-engineering",
+  "external-github": "build/github",
+  "blocks": "build/blocks",
+  "design": "build/design",
+  "site-settings": "build/site-settings",
 }
 const MOVED_PREFIXES: [string, string][] = [
   ["h2a", "messenger/h2a"],
