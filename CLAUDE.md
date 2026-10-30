@@ -171,8 +171,8 @@ What this node is and how each thing is done.
   turn off, review, commands. One list — `lib/agent-kit/commands.json` (`npm run commands`).
 - **Self-evolution.** The architecture's goal is continuous improvement, always together with the architect. Every stage of development
   ends with an offer to the architect to look, together with Claude Code, for ways to improve the instructions and skills. Earlier
-  attempts go into a journal next to your instruction so they are not repeated (the journal is not built yet; the meter —
-  `qa:agent`).
+  attempts go into a journal next to your instruction so they are not repeated: skill `self-review`, the journal
+  `lib/main-agent/owner-decisions-on-skill-changes.md`, the history `npm run evolution`, the meter `qa:agent`.
 - Your bot manages the elements' bots both ways: you can tell an element's agent, it can tell you.
 - **Start of a session:** before your first answer — `npm run person`. It says where the architect reads you now and waits for your
   Telegram channel: the channel's tools reach you only with a command's result.
