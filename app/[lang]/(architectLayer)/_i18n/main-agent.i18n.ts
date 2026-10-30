@@ -7,8 +7,6 @@ export type MainAgentUi = {
   open: string
   off: string
   draft: string
-  rootTitle: string
-  rootOld: string
   none: string
 }
 
@@ -19,8 +17,6 @@ const UI: Record<"en" | "ru", MainAgentUi> = {
     open: "Open",
     off: "turned off in the element's passport",
     draft: "a draft: the element is not born yet",
-    rootTitle: "root",
-    rootOld: "root runs on the earlier template: it has no such page yet.",
     none: "There are no custom elements in the node yet.",
   },
   ru: {
@@ -29,8 +25,6 @@ const UI: Record<"en" | "ru", MainAgentUi> = {
     open: "Открыть",
     off: "выключено в паспорте элемента",
     draft: "черновик: элемент ещё не родился",
-    rootTitle: "root",
-    rootOld: "root работает на прежнем шаблоне: такой страницы у него пока нет.",
     none: "Кастомных элементов в узле пока нет.",
   },
 }

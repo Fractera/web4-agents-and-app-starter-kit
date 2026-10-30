@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { listDrafts } from '@/lib/web4-items/drafts'
+import { builtInDraft } from '@/lib/web4-items/built-in-elements'
 import { addressOf } from '@/lib/web4-items/element-address'
 import { getService } from '@/lib/microservices/registry'
 import { findTreePath, treeVisible } from '@/lib/web4-items/item-tree'
@@ -14,13 +15,13 @@ import { mainAgentUi } from '../_i18n/main-agent.i18n'
 // настройки». Сводных данных пока нет (не входит в 528) — страница ядра ведёт к той же странице у каждого элемента.
 //
 // 🔒 СПИСОК — ИЗ ДАННЫХ УЗЛА, А НЕ РУКОЙ: кастомные элементы — те же, что в левом меню (`listDrafts`); страница элемента — из его
-// дерева (`item-tree.ts`) с теми же флагами паспорта, что у меню. root — на прежнем шаблоне: у него этой страницы нет, и это
-// говорится словами, а не прячется.
+// дерева (`item-tree.ts`) с теми же флагами паспорта, что у меню. 606: у root то же дерево кастомного элемента — он первая строка списка,
+// как в левом меню (прежде здесь стояло «root работает на прежнем шаблоне: такой страницы у него пока нет»).
 
 export function MainAgentElements({ lang, path }: { lang: string; path: string }) {
   const ui = mainAgentUi(lang)
   const trail = findTreePath(path.split('/'))
-  const rows = listDrafts().map((d) => {
+  const rows = [...(builtInDraft('root') ? [{ id: 'root' }] : []), ...listDrafts()].map((d) => {
     const slug = addressOf(d.id)
     const ctx = treeContextOf(d.id)
     const visible = !!trail && trail.every((t) => treeVisible(t, ctx))
@@ -35,10 +36,6 @@ export function MainAgentElements({ lang, path }: { lang: string; path: string }
         <p className="text-sm text-muted-foreground">{ui.elementsLead}</p>
       </div>
       <ul className="grid gap-2 sm:grid-cols-2">
-        <li className="flex flex-col gap-1 rounded-lg border border-border p-3" data-main-agent-element="root">
-          <Link href={`/${lang}${ARCHITECT_HOME}/root`} className="w-fit font-medium text-foreground underline-offset-4 hover:underline">{ui.rootTitle}</Link>
-          <span className="text-[length:var(--fs-small)] text-muted-foreground">{ui.rootOld}</span>
-        </li>
         {rows.map((r) => (
           <li key={r.slug} className="flex flex-col gap-1 rounded-lg border border-border p-3" data-main-agent-element={r.slug}>
             {r.href

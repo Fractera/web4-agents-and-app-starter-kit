@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { join } from "node:path"
 import paths from "@/lib/web4-items/paths.cjs"
 import { listDrafts, RESERVED_NAMES } from "@/lib/web4-items/drafts"
-import { builtInIds } from "@/lib/web4-items/built-in-elements"
+import { builtInDraft, builtInIds } from "@/lib/web4-items/built-in-elements"
 import { isElementAddress } from "@/lib/web4-items/dns-label.mjs"
 import { addressOf } from "@/lib/web4-items/address-file.mjs"
 import { ARCHITECT_PATHS } from "@/app/[lang]/(architectLayer)/_lib/architect-menu"
@@ -39,8 +39,9 @@ function registryIds(): string[] {
 
 /** id элемента или черновика по сегменту пути: адресом или самим id. Не найден — null. */
 export function idOfAddress(segment: string): string | null {
-  // 557: и встроенные элементы — у них дерево элемента, адрес = id (смена адреса им закрыта).
-  const ids = [...listDrafts().map((d) => d.id), ...builtInIds()]
+  // 557: и встроенные элементы — у них дерево элемента, адрес = id (смена адреса им закрыта). 606: и root — кастомный элемент реестра без
+  // черновика (`builtInDraft`); ✗ без него `/ru/root/build/terminal` отвечал 404 на собранном ядре, хотя меню вело туда.
+  const ids = [...listDrafts().map((d) => d.id), ...builtInIds(), ...(builtInDraft("root") ? ["root"] : [])]
   return ids.find((id) => addressOf(id) === segment) ?? (ids.includes(segment) ? segment : null)
 }
 
