@@ -109,7 +109,7 @@
       "provides": [
         "project-design"
       ],
-      "required": false,
+      "required": true,
       "note": "Дизайн проекта отдельным элементом (309): цвета светлой и тёмной темы, шрифты, текст, формы, настройки блоков. После сохранения — сигнал подписчикам, и каждая служба узла перекрашивается на лету.",
       "kind": "core",
       "port": 24686,
@@ -122,7 +122,7 @@
       "provides": [
         "knowledge-graph"
       ],
-      "required": false,
+      "required": true,
       "note": "Граф знаний узла на LightRAG (540): элементы сохраняют то, что узнали, сущностями и связями и находят это по смыслу. Стандартный служебный элемент: v0.1.0 — из roman.",
       "kind": "core",
       "port": 24689,
@@ -131,27 +131,27 @@
     {
       "id": "cache",
       "repo": "https://github.com/Fractera/fractera-redis-cache-starter.git",
-      "version": "v0.1.7",
+      "version": "v0.1.8",
       "port": 24695,
       "provides": [
         "cache"
       ],
-      "required": false,
-      "note": "Быстрое хранилище узла (560): счётчики и очереди горячих действий в Redis, итоги — в data. Пока только тело: выключено паспортом (macOS и Linux; Redis не подключён).",
+      "required": true,
+      "note": "Быстрое хранилище узла (560): счётчики и очереди горячих действий в Redis, итоги — в data. Пока только тело, сам Redis не подключён (macOS и Linux); включено по умолчанию (619).",
       "kind": "core",
       "address": "cache"
     },
     {
       "id": "memory",
       "repo": "https://github.com/Fractera/fractera-memory-starter.git",
-      "version": "v2.2.4",
+      "version": "v2.2.5",
       "port": 24690,
       "provides": [
         "memory",
         "remember",
         "recall"
       ],
-      "required": false,
+      "required": true,
       "note": "Глубокая память узла (596): «запомни» и «напомни о» — фразы, фото, документы, голос; хранит в data, storage, vectors и в своём пространстве memory элемента graph. Включена, пока на компьютере свободно больше 1 ГБ (601); меньше — включается на задачу памяти главным агентом. Главная — лендинг глубокой памяти (602).",
       "kind": "core",
       "address": "memory"
@@ -164,7 +164,7 @@
       "provides": [
         "payments"
       ],
-      "required": false,
+      "required": true,
       "note": "Платёжный элемент узла (573): приём оплаты картой через аккаунт Stripe владельца для элементов узла. Пока только тело: выключен паспортом (приём оплаты ещё не построен).",
       "kind": "core",
       "address": "stripe"
