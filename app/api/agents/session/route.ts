@@ -1,4 +1,4 @@
-// @api clear an agent session's context or switch its model, after the agent's current turn
+// @api clear an agent session's context or switch its model
 import { timingSafeEqual } from "node:crypto"
 import { NextRequest, NextResponse } from "next/server"
 
