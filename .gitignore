@@ -101,3 +101,8 @@ lib/images/previews.generated.ts
 
 # 315: font files copied from @fontsource packages before each build (scripts/local-fonts.mjs)
 public/fonts/
+
+# 610-4: the main agent lives in the core root; these files are written per machine by scripts/main-agent-install.mjs
+.claude/settings.local.json
+.claude/launch-tools.txt
+.claude/launch-model.txt

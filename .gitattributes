@@ -1,4 +1,4 @@
 # Скрипты исполняются на Ubuntu: перевод строки только LF, иначе bash спотыкается о CR.
 *.sh text eol=lf
 # Claude Code does not parse a SKILL.md frontmatter with CRLF (measured 2026-10-19 and 2026-10-20): skills keep LF on every system.
-lib/main-agent/skills/**/*.md text eol=lf
+.claude/skills/**/*.md text eol=lf

@@ -1,0 +1,25 @@
+{
+  "_": "Skills of the core root that the main agent does not get (federal step 610-4, 2026-10-30). The files stay; scripts/main-agent-install.mjs writes them as skillOverrides: off into .claude/settings.local.json of the core root. Each one is a mechanism of the previous line or the job of an element.",
+  "off": {
+    "build-product-with-owner": "mode cases of the previous starter line",
+    "use-use-cases": "mode cases of the previous starter line",
+    "use-products-config": "PRODUCTS-CONFIG of slot 3000, outdated",
+    "use-migration": "migration into slot 3000, outdated",
+    "use-telegram": "Telegram Desk product of the previous line; the node's Telegram is the agent kit",
+    "use-channels": "channels service :3500 of the previous line",
+    "use-map": "geo service :3400 of the previous line",
+    "use-agentic-rag": "LightRAG service of the previous line; the graph is the graph element",
+    "use-vector-memory": "the vectors element does it",
+    "use-object-storage": "the storage element does it",
+    "use-dynamic-workflows": "waves of agents; subagents are forbidden",
+    "find-skills": "installs skills globally; foreign skills go into the project with SOURCE.md",
+    "skill-creator": "only a sample for writing a skill; its runs are forbidden",
+    "extract-design-system": "the Design element does it",
+    "manage-app-settings": "the CONFIG element does it",
+    "handle-block-request": "the Blocks element does it; the main agent has blocks-of-the-node",
+    "explain-this-project": "answered by this instruction and npm run contacts / card",
+    "use-auth": "the auth element owns sign-in",
+    "use-auth-providers": "the auth element owns sign-in providers",
+    "use-design": "the Design element owns the look; the main agent has design-and-settings-of-elements"
+  }
+}
