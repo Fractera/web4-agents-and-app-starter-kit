@@ -100,8 +100,12 @@ if (detach && typed) {
 }
 git(['remote', 'set-url', 'origin', `https://github.com/${target}.git`], tmp)
 
-// 3. Паспорт чужому проекту.
-if (!existsSync(join(tmp, 'OWN-SERVICE-PROPS.json'))) {
+// 3. Паспорт чужому проекту. 407 (✗ найдено 2026-10-30): элемент нынешнего шаблона несёт паспорт папкой `OWN-SERVICE-PROPS/` — прежняя
+// проверка одного корневого файла пускала его по пути чужого проекта, и импорт падал на чтении несуществующего корневого паспорта уже
+// после того, как прежняя история уехала в архив.
+const folderPassport = join(tmp, 'OWN-SERVICE-PROPS', 'OWN-SERVICE-PROPS.json')
+const rootPassport = join(tmp, 'OWN-SERVICE-PROPS.json')
+if (!existsSync(rootPassport) && !existsSync(folderPassport)) {
   const { prepareRepoElement } = await import('./repo-element.mjs')
   let template = null
   try { template = JSON.parse(readFileSync(join(ROOT, 'WEB4-ITEMS-REGISTRY', 'item-template.json'), 'utf8')) } catch { /* шаблона нет */ }
@@ -109,7 +113,7 @@ if (!existsSync(join(tmp, 'OWN-SERVICE-PROPS.json'))) {
   if (!r.ok) fail(`проект не распознан: ${r.reason}`)
 }
 {
-  const propsFile = join(tmp, 'OWN-SERVICE-PROPS.json')
+  const propsFile = existsSync(rootPassport) ? rootPassport : folderPassport
   const props = JSON.parse(readFileSync(propsFile, 'utf8'))
   props.id = id
   props.name = id

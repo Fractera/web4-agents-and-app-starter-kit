@@ -44,6 +44,8 @@ function recognise(dir) {
 
 /** Навыки шаблона — из закреплённого тега, во временную папку; одноимённые навыки человека не заменяются. */
 function copyTemplateSkills(dir, template, git) {
+  // 407: импорт зовёт без шаблона, если `item-template.json` не прочитан, — тогда навыков шаблона нет, а не падение посреди импорта.
+  if (!template?.repo || !template?.version) return 0
   const tmp = join(tmpdir(), `fractera-template-${Date.now()}`)
   const r = git(['clone', '--quiet', '--depth', '1', '--branch', template.version, template.repo, tmp], process.cwd())
   if (r.rc !== 0) return 0
@@ -91,6 +93,12 @@ export function prepareRepoElement({ dir, id, template, root, git }) {
       id,
       name: id,
       summary: '',
+      // 407: поля самоописания нынешнего стандарта — их читает поиск узла («кто в узле это умеет»); агент заполняет их в первой сессии
+      // (`FRACTERA.md`), до того элемент находится только по роли.
+      shortDescription: '',
+      longDescription: '',
+      accepts: '',
+      returns: '',
       kind: 'microservice',
       entry: 'global',
       port: { desired: 24690, note: 'A wish, not a decision. The node assigns the actual port.' },
@@ -138,10 +146,11 @@ export function prepareRepoElement({ dir, id, template, root, git }) {
   if (text === null) writeFileSync(claude, '@FRACTERA.md\n', 'utf8')
   else if (!text.includes('@FRACTERA.md')) appendFileSync(claude, `${text.endsWith('\n') ? '' : '\n'}\n@FRACTERA.md\n`, 'utf8')
   const skills = copyTemplateSkills(dir, template, git)
+  // 407: записи состояния — `development-docs/current-step.md`, как у элемента из шаблона (412): его читает агент при каждом пробуждении.
   const docs = join(dir, 'development-docs')
-  if (!existsSync(join(docs, 'current-steps.md'))) {
+  if (!existsSync(join(docs, 'current-step.md')) && !existsSync(join(docs, 'current-steps.md'))) {
     mkdirSync(docs, { recursive: true })
-    writeFileSync(join(docs, 'current-steps.md'), '# Current steps\n\nNothing started yet. The element was born from its own repository (Fractera node, step 367-4).\n', 'utf8')
+    writeFileSync(join(docs, 'current-step.md'), '# Current step\n\nNothing started yet. The element was born from its own repository (Fractera node, step 367-4).\n', 'utf8')
   }
   if (!existsSync(join(dir, 'TASK-REPORT.json'))) {
     writeFileSync(join(dir, 'TASK-REPORT.json'), JSON.stringify({ task: '', done: [], check: [], path: '', anchor: '' }, null, 2) + '\n', 'utf8')
