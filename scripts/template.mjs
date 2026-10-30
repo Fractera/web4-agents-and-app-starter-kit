@@ -122,20 +122,22 @@ if (cmd === 'release') {
   const version = positional[0]
   if (!/^v\d+\.\d+\.\d+$/.test(version ?? '')) fail('USAGE', 'release <custom|native> <vX.Y.Z> [--message "…"] [--dry]')
   if (git(shop, ['rev-parse', '--abbrev-ref', 'HEAD']) !== 'main') fail('FAIL', 'the workshop is not on main')
-  const dirty = git(shop, ['status', '--porcelain']).split('\n').filter(Boolean)
+  // Content against HEAD after git add — not `git status`: under core.autocrlf a file rewritten with the same text but other line
+  // endings shows «M» while nothing changed (measured on lib/aio/llms-extra.generated.json, 621-3).
+  const uncommitted = () => { git(shop, ['add', '-A']); return git(shop, ['diff', '--cached', '--name-only', 'HEAD']).split('\n').filter(Boolean) }
+  const dirty = uncommitted()
   if (dirty.length) fail('FAIL', `commit or drop first: ${dirty.join(', ')}`)
   if (gitOk(shop, ['rev-parse', '-q', '--verify', `refs/tags/${version}`])) fail('FAIL', `tag ${version} exists — a tag is never moved; take the next patch`)
   if (gitOk(shop, ['ls-remote', '--tags', 'origin', `refs/tags/${version}`])) fail('FAIL', `tag ${version} is on GitHub already`)
   git(shop, ['fetch', '--quiet', 'origin', 'main'])
   if (gitOk(shop, ['merge-base', '--is-ancestor', 'origin/main', 'HEAD']) === null) fail('FAIL', 'GitHub main has commits this clone does not — pull first')
   if (!existsSync(join(shop, 'node_modules'))) fail('FAIL', `no node_modules — npm run template -- clone ${kind} --install (a release runs the whole prebuild)`)
-  git(shop, ['add', '-A'])
   const guards = (readJson(join(shop, 'package.json'), {}).scripts?.prebuild ?? '').split('&&').map((s) => s.trim()).filter(Boolean)
   console.log(`release ${kind} ${version}: ${guards.length} prebuild guard(s), one by one`)
   const broke = runGuards(shop, guards)
   if (broke) fail('FAIL', `guard ${broke}`)
   // A generating step of prebuild (a tree snapshot, a map) that changed a file means the commit is stale: the tag would not be what was checked.
-  const after = git(shop, ['status', '--porcelain']).split('\n').filter(Boolean)
+  const after = uncommitted()
   if (after.length) fail('FAIL', `prebuild changed files — commit them and release again: ${after.join(', ')}`)
   if (DRY) { console.log(`===TEMPLATE_DRY_OK=== ${kind} ${version}: every guard is green; nothing tagged or pushed`); process.exit(0) }
   git(shop, ['tag', '-a', version, '-m', `${version}: ${flag('--message') ?? 'template release'}`])

@@ -1,493 +1,83 @@
-# ANTI-PATTERNS.md — approaches that cost time here, and must not be repeated
-
-**Self-evolving.** The agent appends to this file: whenever an approach turned out to be a dead end,
-the entry is written the moment it is understood, not at the end of the session — an unwritten lesson
-dies with the context.
-
-**The value is in the second half of every entry.** Not *what* failed, but *why*, in enough detail
-that a similar idea can be recognised BEFORE it is built again. An entry that only says "do not do X"
-gets rediscovered as "but my case is different".
-
-Format: a heading, one line of context, the mechanism of the failure, and what to do instead.
-
-🔒 **KEEP EVERY ENTRY SHORT — this file is not a place for reports.** One paragraph of mechanism, one
-small code block, and stop. Budget: **about 700 characters, never more than twelve lines of prose.**
-An agent loads this file WHOLE while it has a task to do; it is not documentation somebody sits down to
-read. An entry that grows into a report page stops being read, and the law inside it dies together with
-the attention it lost. If a case genuinely needs pages, those pages belong to its step — this file keeps
-only the one-paragraph law that came out of it.
-
----
-
-# Premature Reset
-
-> Anti-pattern · stable
-
-Resetting or redeploying the server before the source deploy (git push -> auto build) has finished delivers a stale bootstrap, which is a guaranteed bug. Confirm the new commit is actually live before touching the server.
-
-## Source code example
-
-```
-git log -1 --oneline origin/main   # confirm the new commit is live before redeploying
-```
-
----
-
-# No middleware.ts
-
-> Anti-pattern · stable
-
-This project runs Next.js 16 (Turbopack) and uses **`proxy.ts`** for middleware — never
-`middleware.ts`. Creating a `middleware.ts` file is wrong: keep the `proxy()` function plus
-`export const config` convention inside `proxy.ts`. This is a deliberate project convention, not a
-mistake to "fix". An empty `middleware-manifest.json` is **not** a sign that `proxy.ts` is broken, so
-do not add `middleware.ts` in response to it.
-
-## Source code example
-
-```ts
-// proxy.ts — correct. Do NOT create middleware.ts.
-export function proxy(request: Request) {
-  // ...request gate / rewrite logic...
-}
-export const config = { matcher: [/* ... */] }
-```
-
----
-
-# Styling disappears when .git does
-
-> Anti-pattern · draft
-
-**Tailwind 4 finds classes on its own, but it uses the GIT REPOSITORY ROOT as the boundary of that
-search.** Remove the `.git` folder — most easily by rebuilding the project into a sibling directory and
-dropping the repository on the way — and there is nowhere left to scan.
-
-**The mechanism, and why nothing catches it.** The build does not fail. It succeeds, and it emits a
-stylesheet: a valid one, simply empty of utilities — roughly 9 KB where a working build produces about
-120 KB. The site turns into a white page with unstyled black text, and every guard stays green at the
-same time: types pass, dictionaries are full, the encoding scan is clean, the build exit code is `0`.
-No step in the pipeline treats a valid-but-empty stylesheet as a failure, so the first thing that
-notices is a human looking at the page.
-
-**Recognise it by the size, not by the error** — there is no error. A main CSS chunk in the single-digit
-kilobytes means the source scan found nothing, whatever the build said.
-
-**What to do instead.** Name the source directories explicitly with `@source` in `styles/globals.css`, so
-styling never depends on the presence of git at all. And if the slot itself lost its `.git`, restore it:
-it is the user's project repository, and the panel's Pull and Push buttons are bound to it — losing it
-breaks more than the stylesheet.
-
-## Source code example
-
-```css
-/* styles/globals.css — do not rely on automatic detection */
-@import "tailwindcss";
-
-@source "../app";
-@source "../components";
-@source "../lib";
-@source "../config";
-```
-
----
-
-# Deleting dependencies that nothing imports
-
-> Anti-pattern · stable
-
-After the chat-interface components were removed (`components/ai-elements/`, 19 files), thirteen packages
-were left with zero imports anywhere in the tree: `@xterm/xterm`, `@xterm/addon-fit`, `streamdown` and its
-four modules, `ai`, `react-markdown`, `use-stick-to-bottom`, `@xyflow/react`, `react-rnd`, `motion`.
-
-Every mechanical check agrees they are dead weight, and the conclusion is wrong. **They are kept on
-purpose** — the owner's decision of 2026-08-15: the starter's capability examples will be built on them.
-A terminal, a diagram canvas, streamed markdown, drag-and-resize, animation — these are the demonstrations
-the starter still owes, and re-adding a package later costs a lockfile churn plus a version that no longer
-matches what the example was written against.
-
-The trap is that the evidence looks conclusive. `grep` over the whole tree returns nothing, the build
-succeeds without them, and a task worded as "make the starter lighter" or "remove the junk" points
-straight at them. Intent is not recoverable from a repository: nothing in the code says "waiting for an
-example". So the rule cannot be derived — it has to be read.
-
-**Instead:** leave them. When the weight of the starter or `npm ci` time genuinely comes up, name these
-packages as a deliberate reserve, not as debt, and let the owner decide. This covers PACKAGES only —
-orphaned FILES are cleaned normally, as those 19 were.
-
----
-
-# headers() or cookies() on a public page
-
-> Anti-pattern · stable
-
-Calling `headers()`, `cookies()` or `draftMode()` inside a page or layout opts that route out of static
-generation — Next must then render it on every request. Nothing fails and no gate complains: the page
-still works, it simply stopped being prerendered, and if the call sits in a LAYOUT the whole subtree
-under it goes dynamic with it. Do not reach for them to read a language, a theme or a session on a
-public page: the language is already in the `[lang]` segment, and identity belongs to a client island
-asking `/api/me`. A page that truly cannot be static is an architect's decision, not a convenience.
-
-## Source code example
-
-```tsx
-// ❌ makes this page — and everything under a layout that does it — dynamic
-import { cookies } from "next/headers"
-const theme = (await cookies()).get("theme")
-
-// ✅ language from the address, identity from an island
-export default async function Page({ params }: { params: Promise<{ lang: string }> }) {
-  const { lang } = await params
-  return <Body lang={lang} />   // <AccountButton /> asks /api/me in the browser
-}
-```
-
-
----
-
-# Motion on the page instead of inside an island
-
-> Anti-pattern · stable
-
-**Motion renders its `initial` state on the server.** `initial={{opacity: 0}}` ships **`opacity:0`
-inside the prerendered HTML** — the markup is there, the content is invisible until hydration. Google
-crawls, queues, then renders, and its rule is blunt: *"If the content isn't visible in the rendered
-HTML, Google won't be able to index it."* Readers that never run JavaScript see nothing, and no
-crawler's documentation promises that they do.
-
-**Name the mechanism precisely.** A client component does NOT make a route dynamic — `cookies()`,
-`headers()` and `searchParams` do (entry above). What motion breaks is not the route, it is the
-CONTENT of the HTML. Both end the same way in search; the cure is different.
-
-🔒 **`opacity: 0` is one member of a wider class: the letters' colour and visibility decided by
-something around them, not by themselves** — `bg-clip-text text-transparent` (a background paints
-them), `clip-path`, `mask-image`, text in `::before`, an icon font. Grep finds no `opacity` and the
-heading still arrives the colour of a caption. **Check the computed colour, not the string.**
-
-**Instead:** the server prints a visible static twin; an island swaps in the animated version after the
-first click, `motion` loaded lazily, both versions sharing one markup file so the swap is 1:1.
-Specimen — `app/[lang]/(publicLayer)/_widgets/static/security-orbit/`.
-
-## Source code example
-
-```tsx
-// ❌ ships opacity:0 to the crawler and to everyone without JS
-<motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }}>…</motion.div>
-
-// ✅ twin first, movement after the first click (widgets/static/security-orbit)
-<SecuritySwap ui={ui}><SecurityStatic ui={ui} /></SecuritySwap>
-```
-
-
----
-
-# An unknown flag on a foreign CLI means "do everything"
-
-> Anti-pattern · stable
-
-**`npx <foreign-cli> --help` was read as "install all".** Before the terminal stopped it, the CLI had
-added **ten** packages to `package.json` and reached "`accordion.tsx` exists, overwrite?" — it was
-about to replace the project's own primitives. A component registry's defaults never match the
-composition of this project.
-
-**Instead: a foreign CLI is run only with an explicit list of what is being installed**, and the
-reconnaissance is done by READING the registry (`curl` the component's address), not by launching the
-installer. Check the registry for what exists today, too: components disappear between versions, and
-a plan made from memory of the library installs nothing.
-
----
-
-# Judging a foreign component by its dependencies
-
-> Anti-pattern · stable
-
-**A component from someone else's registry was cleared because it added no package** ("`motion` is
-already installed, nothing new arrives") — and it painted its text with `bg-clip-text
-text-transparent`, i.e. handed every reader without JavaScript a heading in the wrong colour. The
-manifest answers what gets INSTALLED; it never answers what the reader GETS.
-
-**Instead: read the technique of drawing before installing** — grep the source for `transparent`,
-`bg-clip-text`, `clip-path`, `mask-image`, `initial`. Pairs with the CLI law (a foreign CLI is
-installed by an explicit list, never by trust): same suspicion, other axis.
-
----
-
-# Measuring the page through a service worker
-
-> Anti-pattern · stable
-
-**The app registers a service worker (PWA) that serves `pages-v1` / `assets-v1` from a PREVIOUS
-build, and an ordinary reload does not bypass it.** The build is fresh, the rule is in the CSS on disk,
-and the browser still shows the old layout — the measurement describes a build that no longer exists,
-and code gets "fixed" for a defect it does not have. Cost here: half an hour spent proving a widget's
-breakpoints were broken when only the cache was.
-
-**Recognise it by the stylesheet, not by the page:** far fewer rules than the built chunk, or a media
-query missing in the browser that you can grep in `.next/static/chunks/*.css`.
-
-**Before measuring anything in a browser** — unregister the workers, delete the caches, reload with a
-fresh query string.
-
-## Source code example
-
-```js
-// paste in the console BEFORE trusting any measurement
-for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister()
-for (const n of await caches.keys()) await caches.delete(n)
-location.href = location.pathname + "?fresh=" + Date.now()
-```
-
----
-
-# An island importing a server module
-
-> Anti-pattern · stable
-
-`Module not found: Can't resolve 'fs'` at build time, and the import trace points at your
-`*.client.tsx`. A client island pulled in a `lib/` module that touches the filesystem, the database or
-a secret — and the bundler follows imports, not intentions. **It happened twice in one day here**, the
-second time after a comment had been written against it: a rule inside one file does not survive.
-
-Read data in the server component and hand the island **plain props**; if the island genuinely needs
-something at runtime, it asks `/api/*` after hydration. When in doubt, check what your `lib/` import
-imports — one level down is enough to catch it.
-
-# Secure-context APIs die on IP mode
-
-> Anti-pattern · stable
-
-`crypto.randomUUID()`, clipboard, `getUserMedia` and friends exist **only in a secure context** —
-HTTPS or `localhost`. In IP mode the site is served over plain `http://<ip>:3000`, so the call is
-`undefined`, the click throws, and the page dies with a browser-level "page failed to load". Server
-logs stay clean and SSR returns 200, which sends you hunting on the wrong side.
-
-The trap is that the same code works on a domain, so it never shows up in secure mode.
-
-```ts
-const genId = () =>
-  globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`
-```
-
-# A relative auth path picks up a language prefix
-
-> Anti-pattern · stable
-
-A server guard redirected to `"/register?requireRole=architect"` — a relative path on the app's own
-domain. But `/register` belongs to the **auth service**, not to the app. The language router sees a
-path with no language prefix, sends `308` to `/<lang>/register`, the app has no such page, and the
-owner meets a white screen where the first account was supposed to be created.
-
-Redirect to auth by its **absolute** address, built from the auth origin, never by a bare path.
-
-# State seeded from a prop never re-seeds
-
-> Anti-pattern · stable
-
-`useState(() => [...suggested])` runs its initialiser **exactly once, at mount**. The owner switches
-the project structure, the parent re-renders with new suggestions — and the editor still shows the
-previous ones until a manual reload. It reads as "the switch does not work".
-
-Either derive the value during render instead of storing it, or reset deliberately on a changing
-`key`, or sync explicitly when the source prop changes. Silent staleness is the default; opting out is
-your job.
-
-# A silent database fallback splits users across two files
-
-> Anti-pattern · stable
-
-The owner registered and could not log in. The agent looked at the database, reported "no accounts",
-the owner insisted he had just registered — and both were telling the truth: the records existed, in
-**another file**. A `catch` around opening the database fell back to a second path, and from then on
-one process wrote here and another read there.
-
-A fallback that changes *where the truth lives* must be loud: log it, surface it, or refuse to start.
-Silent recovery turns a configuration error into missing data with no error anywhere.
-
-# A swallowed error turns a wrong path into "no data"
-
-> Anti-pattern · stable
-
-```ts
-try { entries = fs.readdirSync(dir, { withFileTypes: true }) }
-catch { return [] }        // ← "the folder is absent, and that is legal"
-```
-
-The folder was not absent — the path was wrong. The empty array is indistinguishable from an honest
-empty result, so the page renders "nothing here" and nobody looks further.
-
-Catch the case you actually mean (`ENOENT`) and let everything else through. A `catch` with no
-condition is a decision that every possible failure is legal.
-
-# A panel switch is invisible until ISR expires
-
-> Anti-pattern · stable
-
-The owner turns authentication off, the header still shows the login button; turns it on and off
-again — nothing. The obvious conclusion is that the switch is broken. It is not: the switch works, the
-**delivery to the visitor** lags, because static pages are revalidated on their own schedule.
-
-Say this out loud before he reports it as a defect, and give the number: "the page is regenerated
-within N minutes". If a setting must be visible immediately, that page is the one that reads the
-config per request — a deliberate exception, not a default.
-
-# Two caches, and only one was cleared
-
-> Anti-pattern · stable
-
-The image exists in the media library and the catalogue shows a dash. Everything you suspect turns
-out healthy — the row, the file, the permissions — because the defect is not in the data path but in
-the **second** cache nobody remembered: one in the data layer, one in Next's own fetch/route cache.
-
-When a value is cached twice, invalidation is a pair. Write down both places the moment you add the
-second one; it is invisible from either side alone.
-
-# An identifier derived from a mutable field lies forever
-
-> Anti-pattern · stable
-
-A product registry used ids like `store-1`, `landing-2` — readable, and correct until the owner
-changes the structure on the screen built precisely for that. Result: a `landing` product carrying the
-id `store-1`, with `lib/products/store-1/` behind it. Three defects of one family within an hour of
-building it.
-
-An id is meaningless and eternal (`p1`, `p2`); everything human — name, type, structure — is a field
-next to it. Anything derived from a field the owner can edit will disagree with reality on his first
-edit.
-
-# A default value destroys "absent" versus "empty"
-
-> Anti-pattern · stable
-
-A resolver distinguished three states — the branch is missing, the branch is present and empty, the
-branch has values — and a well-meaning default collapsed the first two into one. Both decisions were
-right on their own; together they deleted the only signal that said "nothing was configured here".
-
-Before giving a default, ask whether the caller can tell "not set" from "set to nothing". If that
-difference carries meaning anywhere, the default belongs at the point of use, not at the point of
-read.
-
-# A random id defeats the seed guard and duplicates rows
-
-> Anti-pattern · stable
-
-"Every so often a deployment leaves duplicated products." The seeding routine guards against a repeat
-run by checking whether the row already exists — by id. The id was generated randomly at seed time, so
-the guard compared this run's fresh id against the previous run's fresh id and never matched.
-
-A seed guard needs a **stable natural key**: the slug, the external id, anything the source itself
-carries. If the source has no such key, the guard is decorative.
-
-# `SQLITE_BUSY` during the build
-
-> Anti-pattern · stable
-
-The build fails with `SQLITE_BUSY`. Two prerender workers opened the database eagerly at module load,
-one of them ran a migration, and neither was willing to wait: SQLite serialises writers, and without
-`busy_timeout` the loser fails instead of retrying.
-
-Open the database lazily, inside the function that needs it, and set a `busy_timeout`. Migrations run
-before the build as a separate command, never as a side effect of importing a module.
-
-# A cookie from the previous server locks the owner out
-
-> Anti-pattern · stable
-
-The server is redeployed on the same domain, the owner tries to log in, and the dialog returns the
-same message forever. Another browser works fine — which is the tell: the state is on his machine, not
-on the server. The session cookie was signed by the previous installation's secret; the new one cannot
-verify it and answers "not authenticated" to a browser that keeps sending it.
-
-An unverifiable session cookie must be **cleared** in the same response that rejects it, not merely
-rejected. Otherwise the loop has no exit from inside.
-
-# A public door stays closed until the domain reveals it
-
-> Anti-pattern · stable
-
-The gate in `proxy.ts` closes `/api/*` **as a whole**, with a short list of exceptions. A new route
-that must answer a guest works perfectly in IP mode — where the login is bypassed — and returns `401`
-the moment the site runs on a domain. That is, at the customer.
-
-Every door meant for guests is named in `PUBLIC_API_PREFIXES` in the same edit that creates it. Test
-it with the bypass off, or you are testing the bypass.
-
-# A production process that builds its own frontend at startup
-
-> Anti-pattern · stable
-
-A service answered `502` and went into an endless restart loop after a harmless update. It built its
-own interface on start; a Node version mismatch made the build fail, so the process never came up, so
-it was restarted, so the build failed again.
-
-Building happens **before** starting, as its own command. A production process only starts. If start
-and build are one command, every build-time problem becomes an outage that looks like a crash.
-
-# A schema change belongs in one constant, not in a migration file
-
-> Pattern · stable
-
-Tables live in the `SCHEMA` constant in `lib/db/index.ts`. Both `makeLocalDb()` and
-`initRemoteSchema()` execute it at startup, so a table added there appears in the local file database
-and in the remote data layer without a migration file, a script or a button.
-
-Writing a migration by hand here is not extra safety — it creates a second source of truth that the
-two environments will drift apart on. → `use-database`
-
-# Удаление страницы ломает то, что о странице не знает
-
-> Defect · paid 2026-08-25
-
-Страница прошла все проверки на удаление — адреса нет в плане, ссылок нет, паттерн воспроизведён — и
-всё равно оказалась несущей. `/blocks` удалили, и `check:sections` дал десять нарушений: её
-`_data/specimen.ts` был единственным образцом каждого из 31 вида каталога.
-
-Вторым тем же днём: `parser-fs.mjs` — первый шаг `prebuild` и `predev` — жёстко порождал список постов
-блога и после удаления папки падал с `ENOENT` **раньше всех гейтов**. Ни один сторож этого не ловит:
-он падает до них.
-
-**Перед удалением спрашивать не только «кто на неё ссылается», но и «кто на ней ДЕРЖИТСЯ»** — гейт,
-генератор, шаг `prebuild`. И проверять удаление **полным `prebuild`**, а не выбранным списком гейтов:
-то, что падает первым, гейты не видят.
-
-# Сетевой отказ, записанный в отказ по правам
-
-> Defect · paid 2026-09-19, four owner complaints in a row
-
-`AccessGate` спрашивал `/api/me` и имел три состояния: проверяю · пустили · не пустили. Сетевая
-ошибка падала в `.catch(() => setVerdict("denied"))` — то есть **«не смог спросить» записывалось в
-«отказано»**.
-
-На домашней машине это не редкость, а ежедневность: узел ещё поднимается после включения компьютера ·
-быстрый туннель умер, и страницу отдал service worker из кеша · идёт пересборка. Владелец видел окно
-«Требуется одна из этих ролей: architect» на своём собственном компьютере и сообщал об этом четыре
-раза; каждый раз проверяли серверное правило — **а оно было верным и работало**.
-
-**Любой `catch` вокруг вопроса о правах обязан давать третье состояние.** Отказ — это только ОТВЕТ
-двери (401/403 или роли не те). Молчание сети не доказывает ничего, и окно поверх страницы на его
-основании есть уверенный неверный ответ. Замок при этом всё равно серверный: островок ничего не
-охраняет, он объясняет.
-
-Рядом — второй признак того же класса: **проверка `process.env.NODE_ENV !== 'production'` на домашней
-машине мертва**, потому что узел работает в продакшне по решению владельца. Плашка установки PWA несла
-такую проверку и всплывала вопреки ей. Работает признак АДРЕСА: петля и быстрый туннель — адреса без
-будущего, и установленное с них приложение назавтра открывает ошибку.
-
-# A status colour from the palette with a manual dark: pair
-
-> Defect · paid 2026-10-22, one failed core build (~10 min with the node stopped)
-
-The On/Off label of the Passport (567-7) was written `bg-emerald-500/15 text-emerald-700 dark:text-emerald-300` (and the orange twin).
-The shadcn guard `no-manual-dark` in `prebuild` rejects it — a palette colour fits one theme and breaks the other — and the build stopped
-only after the node was already down. **A status colour is a theme token that knows both themes:** `tone-data` (green), `tone-access`
-(orange), `primary`, `destructive` (`sections/tone.ts`). **Before `serve:rebuild` run `npm run prebuild` alone** — every guard in
-seconds, with the node still up; the build only adds the type check.
-
-# A light page door built from a heavy one
-
-> Defect · paid 2026-10-22, the owner: «каждый раз когда в паспорте подгружаются элементы … это занимает слишком много времени»
-
-`/api/node/passport` built its cards from `projectRows` — the whole Projects table: per element two synchronous `git` calls (1.45 s
-blocking the server), the full home page (1.7 MB HTML for one `<title>`) and the passport over HTTP (0.4–0.86 s each) — and then threw
-the native elements away. ~3 s for five cards. **A door reads only what its page shows, and from disk when the node holds it:**
-`diskPassport` (element-props) equals `/api/own-service-props` on every live element; `git` goes async; a home page is read to
-`</head>`. Measure the door before and after with `curl -w %{time_total}` on localhost.
+# ANTI-PATTERNS — dead ends this node has already paid for
+
+Read «All systems» and the section of your operating system **before a core rebuild, before moving or renaming folders, before work with
+processes, ports and pm2**. One entry: what happens → why → what to do. «Guard:» names the check that already holds the lesson — then the
+entry is a reminder, not a duty. A new entry is written after a measured failure, never as a precaution, with the sign that would have
+warned earlier. The section stays short: a lesson that a guard or the code now holds for good may leave it.
+
+## All systems
+
+- **The core rebuild closes the lid.** `npm run serve:rebuild` stops every node process except the tunnels (the sites answer from their
+  Cloudflare copies), moves `WEB4-ITEMS` aside during `next build` (a big neighbour inside the build root costs gigabytes) and keeps the old
+  `.next` outside the project to return it if the build fails. Run `npm run prebuild` alone first — a guard failing at minute ten costs ten
+  minutes offline. The main agent is a child of the core: the rebuild ends its session, the person wakes it again.
+- **«Built» is `builtAt`, not `commit`.** `/api/health` → `commit` is the commit the process started on; `builtAt` is when the build was made.
+  After a rebuild also count the page's `/_next/static/*` files that do not answer 200 — a site without a single style still answers 200.
+- **The exit code of a build is npm's.** `npm run build | tail` prints tail's 0. Log to a file and take `RC=$?` right after npm.
+- **esbuild and `next dev` do not check types.** A new `.mjs` that a TypeScript door imports: run a narrow `tsc` over the changed files before a
+  build (a default `= null` becomes the type `null` — give it a JSDoc `@param`).
+- **A module a door imports takes only relative `require('./…')`.** `require(path.join(process.cwd(), …))` breaks Turbopack with dozens of
+  errors. Guard: `check:agent-kits`.
+- **A child of the core's Next server inherits `__NEXT_PROCESSED_ENV`, `NEXT_*`, `PORT`** and then never reads its own `.env.local`. Every
+  pm2 or npm call from a script that a door can run gets a cleaned environment.
+- **pm2 keeps a process's environment.** A variable removed from the config stays in the live process; `--update-env` does not remove it —
+  `pm2 delete` and `pm2 start`.
+- **Alive is not answering.** pm2 says `online` while every page is 500. A watcher asks the capability over HTTP and is patient (a cold start
+  takes up to 40 s); a dependency on someone else's service is asked about the service, not about its process.
+- **A heavy synchronous call inside a door stops the whole site,** and the watcher restarts the core in the middle of it. In a door — only
+  asynchronous work; a big folder is renamed into a trash and deleted without waiting.
+- **Guards read the git index.** A new file is invisible to `git ls-files` until `git add`: run guards after `git add`, before the tag. A tag is
+  never moved — a broken release gets the next patch. Guard: `npm run template -- release`.
+- **A `.gitignore` line without a leading slash** hides that name at every depth (`icons/` once hid a template's own files). A root folder is
+  `/icons/`. After a commit on a new template tag, compare the template's file list with the tag.
+- **One file of a shared registry.** `git add` of `WEB4-ITEMS-REGISTRY/web4-items.json` carries the node's state into git; a pin is committed
+  through its own index. Guard: `npm run template -- pin|rollout`.
+- **A Claude Code check inside an element's folder** (`claude -p …`) runs without
+  `--settings {"enabledPlugins":{"telegram@claude-plugins-official":false}}` only at a price: the Telegram plugin fails without a token, and the
+  machine-wide cache of MCP failures silences the channel in every session for 15 minutes.
+- **Waking an agent whose folder Claude Code does not trust** stops on the trust question, and the bridge sends that question to the person in
+  Telegram. Look at `~/.claude.json` (`hasTrustDialogAccepted` of that folder) before a «free» probe.
+- **`--add-dir` takes a list:** every argument after it up to the next flag. The task given last disappears into it. Put it first, followed by
+  another flag; check the agent's screen (`npm run agent:screen -- <id>`), not the wake door's answer.
+- **A pasted `/model` saves the model as the person's default for new sessions.** Switch a node session's model by restarting it with
+  `--continue --model` (`npm run session -- model …`). A session woken without a single message then resumes its folder's previous conversation.
+- **A «session end» hook does not run when the bridge kills the session.** A writer that must not lose anything is the Stop hook.
+- **Search by meaning always returns the nearest neighbour.** «Nothing found» needs a similarity threshold or a filter, never a nonsense query.
+- **A probe of an element on a spare port subscribes to CONFIG and Design with its own port** and steals the live element's signals: run it
+  with `CONFIG_SERVICE_URL` and `DESIGN_SERVICE_URL` empty.
+- **A document that names a path is checked from the place that reads it.** A path inside a file a hook reads is relative to that file, not to
+  the process; a relative data path of a standalone server ends up inside the build and dies with the next build — data paths are absolute.
+
+## Windows
+
+- **A folder some process works in cannot be renamed** (EPERM) — that includes a terminal that once did `cd` into it and a background search
+  over the node (`grep -r .`). Before moving folders or a rebuild: no background command reads the node's folders; ask the person about open
+  terminals and Explorer windows inside `WEB4-ITEMS`.
+- **node does not start `.cmd` or `.bat` without a shell** (EINVAL, silently). `npm` and `pm2` from code — `shell: true` on Windows only and
+  only with constant arguments.
+- **Every process a background service starts needs `windowsHide: true`,** or a console window blinks over the person's screen.
+- **PowerShell 5.1 writes UTF-8 with a BOM** (`Out-File`, `>`, `Set-Content -Encoding utf8`); `JSON.parse` fails and a reader's `catch` returns
+  its default as if the file were absent. Strip `^\uFEFF` before parsing any file a person may edit; write test files from node.
+- **Git Bash rewrites an argument that looks like a root path** (`/api/x` → `C:/Program Files/Git/api/x`) when it calls a Windows program.
+  Normalise it in the receiving program, or set `MSYS_NO_PATHCONV=1`.
+- **Backslashes, `$` and backticks pass through a shell badly** (`node -e`, heredocs): `\b` and `\s` vanish, backticks run. Write such a
+  script to a file.
+- **`grep` in Git Bash lies.** `grep -c $'\r'` counts every line, `grep -P` fails on the locale and reads as 0, `grep -i` does not fold
+  Cyrillic case. Count bytes and match text with node; give every search a known positive and a known negative.
+- **Under `core.autocrlf=true` a file rewritten with the same text and other line endings shows «M» in `git status`.** Ask whether content
+  changed with `git add` and `git diff --cached HEAD`, not with `git status`.
+- **The account name** comes from `USERDOMAIN`, not `os.hostname()` (NetBIOS cuts it to 15 characters). Autostart at login is the Startup
+  folder: the Task Scheduler needs an administrator.
+- **A process's command line quotes an argument only when it has spaces** — a reader of command lines handles both forms.
+- **`os.kill(pid, 0)` in Python on Windows ends the process.** Ask the operating system whether a pid is alive.
+
+## macOS
+
+- **Autostart at login is launchd** (a LaunchAgent), not systemd and not a Startup folder. No failure of this node on macOS has been measured
+  yet: the first entry here comes from a measured one.
+
+## Linux
+
+- **Outgoing connections take ports 32768–60999** (Windows from 49152): a permanent listener in that range fails unreproducibly. The node's
+  ports stay in 24680–25679; 3000 is never taken — the person's own projects live there.
+- **Autostart is systemd;** `pm2 startup` needs sudo.
