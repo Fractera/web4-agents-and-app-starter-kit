@@ -62,6 +62,12 @@ async function main() {
   const server = createServer((req, res) => {
     handle(req, res)
   })
+  // Туннель Cloudflare держит простаивающее соединение с узлом до 90 с (cloudflared `keepAliveTimeout`, по умолчанию 1m30s —
+  // developers.cloudflare.com, «Origin parameters»), а Node закрывал его через 5 с. Запрос туннеля в закрываемое соединение получал разрыв,
+  // посетитель — 502 («wsarecv: An existing connection was forcibly closed», журнал домена каждый день с 19.10; федеральный шаг 606,
+  // владелец 2026-10-30: «Да, починить сейчас»). Узел держит соединение дольше туннеля; заголовки ждёт чуть дольше этого (совет Node).
+  server.keepAliveTimeout = 120_000
+  server.headersTimeout = 121_000
 
   // Комплекты агента служб (271): сокет `/pty/<служба>` и опрос ботов. Список служб находится обходом
   // папок `architect/<служба>/_agent-kit/` — здесь нет ни строки о конкретной службе.
