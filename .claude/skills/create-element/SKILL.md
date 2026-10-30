@@ -1,6 +1,6 @@
 ---
 name: create-element
-description: Build process. Nobody in this node covers a need — search Lagrix for a whole element (f2f, simulated today), then create a new custom element with a role, put the task into its intake, wake its agent and tell the architect how to go on. Load it when the person asks for something no element of the node does, asks for a new element or service, or when an element's agent asks the core for a new element.
+description: Build process. Nobody in this node covers a need — search Lagrix for a whole element (f2f, simulated today), then create a new custom element with a role, put the task into its intake, wake its agent and tell the architect how to go on. Load it when the person asks for something no element of the node does, asks for a new element or service, brings a link, an SDK or a task with no clear result (a research, «look into X») worth keeping and growing rather than answering once in chat, or when an element's agent asks the core for a new element.
 ---
 
 # Create an element for a need nobody covers
@@ -9,6 +9,19 @@ description: Build process. Nobody in this node covers a need — search Lagrix 
 `npm run create`, three lines to the person and their «yes»: what will be created, with which role and task, who leads it.
 
 A hint, not a law: models of late 2026 work worse under rigid step-by-step instructions.
+
+## A link, an SDK or a task with no clear result
+
+The owner of Fractera, 2026-10-23: «не всегда в наш проект придут конкретные и понятный нам задачей … для каждой из них может быть
+создана либо приложение либо веб интерфейс доступный по ссылке … даже если он просит исследования можно было бы сделать элемента
+который был бы предназначен для аккумулирования подобных исследование … о всех этих преимущества стоит сказать пользователю и
+предупредить что мы собираемся сделать».
+
+- First say what the node does better than a one-time answer in chat: an element of its own keeps every finding in the node's data
+  and graph, adds the next research to it, compares them over time and shows it all on its own page by link. Name what you are about
+  to create and ask; a plain answer in chat stays possible if that is all the person wants.
+- A link or an SDK to study — skill `study-for-element`; it comes here first when no element fits.
+- The person need not move to a computer: the element's page is on the node's own domain and opens on the phone too.
 
 ## The order
 
