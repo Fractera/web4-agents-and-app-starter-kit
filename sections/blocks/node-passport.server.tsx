@@ -27,6 +27,8 @@ const WORDS: Record<string, Omit<NodePassportWords, 'rating' | 'nodeHints' | 'wa
     powerOff: 'Off',
     web4On: 'This element can receive orders from the Web4 network',
     web4Off: 'This element is not integrated into the Web4 network yet',
+    show: { label: 'Show', all: 'All', on: 'In the Web4 network', off: 'Not in the network' },
+    changeSettings: 'Change settings',
     mode: {
       label: 'Node mode',
       project: 'Single project',
@@ -60,6 +62,8 @@ const WORDS: Record<string, Omit<NodePassportWords, 'rating' | 'nodeHints' | 'wa
     powerOff: 'Выключен',
     web4On: 'Этот элемент может получать заявки из сети Web4',
     web4Off: 'Этот элемент ещё не интегрирован в сеть Web4',
+    show: { label: 'Показать', all: 'Все', on: 'В сети Web4', off: 'Не в сети' },
+    changeSettings: 'Изменить настройки',
     mode: {
       label: 'Режим узла',
       project: 'Единый проект',

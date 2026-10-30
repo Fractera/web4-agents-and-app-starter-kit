@@ -66,6 +66,9 @@ export type NodePassportWords = {
   /** 566: подсказки звёздочки Web4 (слова владельца). */
   web4On: string
   web4Off: string
+  /** 566: отбор карточек над ними — все · в сети Web4 · не в сети; кнопка «Изменить настройки» → «Настройки сайта» элемента. */
+  show: { label: string; all: string; on: string; off: string }
+  changeSettings: string
   wallet: NodeWalletWords
   /** 553-9 → 564: карточка режима узла — название, описание текущего режима, общее для обоих, где сменить. */
   mode: { label: string; project: string; factory: string; byDefault: string; projectText: string; factoryText: string; both: string; chosen: string; change: string }
@@ -113,6 +116,8 @@ const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? ""
 export function NodePassport({ words, lang }: { words: NodePassportWords; lang: string }) {
   const [cards, setCards] = useState<Card[] | "loading" | "failed">("loading")
   const [wallet, setWallet] = useState<{ address: string } | null>(null)
+  // 566 (владелец 2026-10-22: «показывать все элементы или … только те которые используются в lagrix или наоборот … не используются»).
+  const [show, setShow] = useState<"all" | "on" | "off">("all")
 
   useEffect(() => {
     fetch(`${BASE}/api/node/passport?lang=${lang}`, { cache: "no-store" })
@@ -182,7 +187,16 @@ export function NodePassport({ words, lang }: { words: NodePassportWords; lang: 
       <Accordion type="single" collapsible defaultValue="node">
         {node}
         {walletCard}
-        {cards.map((c) => {
+        <div className="my-4 flex flex-wrap items-center gap-2" role="group" aria-label={words.show.label} data-passport-filter={show}>
+          <span className="text-sm text-muted-foreground">{words.show.label}:</span>
+          {(["all", "on", "off"] as const).map((k) => (
+            <button key={k} type="button" aria-pressed={show === k} onClick={() => setShow(k)}
+              className={buttonVariants({ variant: show === k ? "default" : "outline", size: "sm" })} data-passport-show={k}>
+              {words.show[k]}
+            </button>
+          ))}
+        </div>
+        {cards.filter((c) => show === "all" || (show === "on" ? !!c.web4 : !c.web4)).map((c) => {
           const dot = c.described ? null : (
             <span className="size-2.5 shrink-0 rounded-full bg-destructive" role="img" aria-label={words.noDescription} data-no-description />
           )
@@ -211,6 +225,8 @@ export function NodePassport({ words, lang }: { words: NodePassportWords; lang: 
                 </span>}
                 // 566 → 567-7: Web4 — большая звезда справа (закрашена — в сети), подсказка — слова владельца; вторая звёздочка снята.
                 star={{ on: !!c.web4, hint: c.web4 ? words.web4On : words.web4Off }}
+                // 566: вне сети Web4 рейтинга Lagrix нет — только описание.
+                plain={!c.web4}
                 lead={<>
                   <span className="line-clamp-1">{c.lead ?? words.noDescription}</span>
                   {/* 567: выключенный элемент — с причиной. */}
@@ -241,6 +257,10 @@ export function NodePassport({ words, lang }: { words: NodePassportWords; lang: 
                 ) : (
                   <p className="text-sm text-muted-foreground">{words.notBorn}</p>
                 )}
+                {/* 566: «нужно сделать кнопку изменить настройки» — «Настройки → Настройки сайта» элемента, там выбор «в сети Web4» (567-6). */}
+                <div>
+                  <a href={`${BASE}/${lang}${c.open}/settings/site-settings`} className={buttonVariants({ variant: "outline", size: "sm" })} data-passport-settings={c.id}>{words.changeSettings}</a>
+                </div>
               </LagrixRating>
             </div>
           )

@@ -67,7 +67,7 @@ const INDICATORS: Indicator[] = [
   { key: "unreviewed", Icon: MessageSquareDashedIcon, tone: "text-muted-foreground", unit: "sumUnit" },
 ]
 
-export function LagrixRating({ words, title, lead, marker, children, id, item, star }: {
+export function LagrixRating({ words, title, lead, marker, children, id, item, star, plain = false }: {
   words: LagrixRatingWords
   title?: ReactNode
   lead?: ReactNode
@@ -79,8 +79,13 @@ export function LagrixRating({ words, title, lead, marker, children, id, item, s
   /** 567-7 (owner 2026-10-22: «используй большую звёздочку … закрасить или не закрасить … перенеси подсказки»): the big star on the right
    *  says whether the element is in the Web4 network — filled or empty, with the owner's words in a tooltip. Without it — the plain star. */
   star?: { on: boolean; hint: string }
+  /** 566 (owner 2026-10-22: «если элемент не используется в Lag Rx то не нужно показывать его рейтинги достаточно показать просто его
+   *  описание»): the card without the indicators, the violation line and the note — its header and the caller's children only. */
+  plain?: boolean
 }) {
-  const body = (
+  const body = plain ? (
+      <CardContent className="flex flex-col gap-4">{children}</CardContent>
+  ) : (
       <CardContent className="flex flex-col gap-4">
         {children}
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3" data-lagrix-indicators>
