@@ -202,8 +202,10 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
   const memHooks = typeof modes.memoryHooks === 'function' ? modes.memoryHooks(element, mode) : null
   // 615-1 (✗ 2026-10-30 13:22: `find .` из корня ядра — 2 минуты молчания в Telegram): главному агенту — сторож медленного поиска.
   const guard = element === MAIN_AGENT ? guardHook() : null
-  // 615-2: сессии с каналом — ход работы в её Telegram (владелец: «буквально потри слова на каждое событие с временем»).
-  const progress = viaChannel ? progressHooks(element) : null
+  // 615-2: ход работы в Telegram (владелец: «буквально потри слова на каждое событие с временем»). 615-3: всем сессиям, кроме рабочего
+  // процесса, — куда писать (свой бот, чат главного агента для элемента, которого он ведёт, или никуда), хук решает при событии: запись
+  // «включил главный агент» появляется уже после рождения сессии.
+  const progress = mode !== 'work' ? progressHooks(element) : null
   const extra = { PreToolUse: [...(guard ? [guard] : []), ...(progress?.PreToolUse ?? [])], PostToolUse: progress?.PostToolUse ?? [] }
   let hooks = memHooks
   for (const [event, list] of Object.entries(extra)) if (list.length) hooks = { ...(hooks ?? {}), [event]: [...(hooks?.[event] ?? []), ...list] }
