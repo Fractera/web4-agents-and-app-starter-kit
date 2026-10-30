@@ -50,6 +50,7 @@
     "check:tools-map": "node scripts/check-tools-map.mjs",
     "check:steps": "node scripts/check-steps.mjs",
     "node:readiness": "node scripts/node-readiness.mjs",
+    "template": "node scripts/template.mjs",
     "serve:start": "node scripts/serve.mjs start",
     "serve:stop": "node scripts/serve.mjs stop",
     "serve:status": "node scripts/serve.mjs status",
