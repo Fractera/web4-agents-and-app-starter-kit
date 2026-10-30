@@ -81,10 +81,12 @@ export function updateElement(id: string): UpdateResult {
   return { ok: false, error: "conflict", files, task }
 }
 
-/** Адрес терминала элемента для окна вставки: у служб ядра — их id, у рождённого — `<адрес>/build` (356). */
+/** Адрес терминала элемента для окна вставки: у служб ядра — их id, у рождённого — `<адрес>/build` (356). 606: и у любого элемента без своей
+ *  страницы `architect/<id>/terminal` (root с шага 606) — его терминал в дереве элемента. */
 export function terminalServiceOf(id: string): string {
   const e = entryOf(id)
-  if (e?.born) {
+  const ownTerminal = existsSync(join(ROOT, "app", "[lang]", "(architectLayer)", "architect", id, "terminal"))
+  if (e?.born || (e && !ownTerminal)) {
     try { return `${(JSON.parse(readFileSync(join(ROOT, "data", "services", id, "address.json"), "utf8")) as { address?: string }).address || id}/build` }
     catch { return `${id}/build` }
   }

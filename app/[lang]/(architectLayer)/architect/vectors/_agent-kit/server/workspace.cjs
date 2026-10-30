@@ -86,14 +86,16 @@ function serviceDir(service) {
  * (`architect/<id>/agent-kit.json`), его страницы рисует дерево элемента, папка на диске есть. Это рождённые (`kind: user` с `born`) и
  * встроенные, которым своей группы не заводили (589-6, ✗ 2026-10-24: у stripe с шага 573 агента не было вовсе — `no-agent-kit`, и узел
  * не мог поручить ему постройку). Служба со своей копией через общую не идёт — её обслуживает своя.
+ * 606 (владелец 2026-10-30: root — кастомный элемент со стандартным деревом): `kind: user` без `born` — root, он ставится из реестра, а не
+ * рождается. ✗ С 2026-10-28 его группа снята, а здесь требовался `born` — агента у root не было (`no-agent-kit`). Признак один для обеих
+ * зон: своей группы нет, папка есть.
  */
 function isBornItem(service) {
   const id = String(service ?? '')
   if (!ID_SHAPE.test(id)) return false
   const entry = registered().find((s) => s.id === id)
   if (!entry || manifest(id) !== null) return false
-  if (entry.kind === 'user') return !!entry.born && existsSync(itemDir(id, 'user'))
-  return existsSync(itemDir(id, 'core'))
+  return existsSync(itemDir(id, entry.kind))
 }
 
 /** Группы, у которых комплект установлен и папка агента существует. Список — обходом, не перечнем. */
