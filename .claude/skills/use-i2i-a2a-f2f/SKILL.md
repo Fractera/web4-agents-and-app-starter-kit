@@ -54,4 +54,4 @@ Old addresses `connectors/{catalog,api,mcp}`, `build/{api,mcp,catalog}` and `web
   `…/_sections/m2m/README.md` (where the f2f tabs went).
 - Lagrix: `https://github.com/lagrix-dev/lagrix` — README «Two protocols at the start», escrow (doc 04), API (12), discovery and
   reputation (17), governance (18), F2F draft (20).
-- Element side: template `CLAUDE.md` «Two natures» and the element's skill `a2a-conversation` (i2i first).
+- Element side: template `CLAUDE.md` «4. Process» and the element's skill `a2a-conversation` (i2i first).
