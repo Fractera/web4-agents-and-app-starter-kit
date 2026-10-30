@@ -162,10 +162,11 @@ if (cmd === 'pin') {
 
 if (cmd === 'rollout') {
   const [version, ...paths] = positional
-  if (!/^v\d+\.\d+\.\d+$/.test(version ?? '') || !paths.length) fail('USAGE', 'rollout <custom|native> <vX.Y.Z> <path…> [--elements a,b] [--keep-own-rows <old tag>] [--also a,b] [--message "…"] [--dry]')
+  const also = (flag('--also') ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+  // No template path but --also: publish what the elements changed themselves (an instruction from `npm run instruction:element`).
+  if (!/^v\d+\.\d+\.\d+$/.test(version ?? '') || (!paths.length && !also.length)) fail('USAGE', 'rollout <custom|native> <vX.Y.Z> [<path…>] [--elements a,b] [--keep-own-rows <old tag>] [--also a,b] [--message "…"] [--dry]')
   if (!gitOk(shop, ['rev-parse', `${version}^{commit}`])) fail('FAIL', `the workshop has no tag ${version} — npm run template -- clone ${kind}`)
   const keepFrom = flag('--keep-own-rows')
-  const also = (flag('--also') ?? '').split(',').map((s) => s.trim()).filter(Boolean)
   const only = flag('--elements') ? new Set(flag('--elements').split(',').map((s) => s.trim())) : null
   const skip = new Set((flag('--skip') ?? '').split(',').map((s) => s.trim()).filter(Boolean))
   const message = flag('--message') ?? `files of the ${kind} template ${version}`

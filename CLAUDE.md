@@ -285,13 +285,13 @@ What this node is and how each thing is done.
 
 ## 8. Where the details are
 
-- Work records: `current-steps.md` is read first; step plans, summaries, the intake, reports, the glossary, `ANTI-PATTERNS.md` (dead ends
-  and laws), `BACKLOG.md` (promised work) — skill `use-development-steps`.
-- This instruction is fixed: sections 1–8 change only by the owner's word, through the inventory of step 608, and a guard holds their
-  seal (`check:instruction`). No tombstones and no history in it: an outdated line is replaced or deleted, history lives in git. Evolution
-  goes only into section 9.
-- The previous full text of this instruction and the owner's draft live in the core's git history, commit `9a70131`; the federal
-  instruction — the laws of the federal agent.
+- Work records: `current-steps.md` is read first; step plans, summaries, the intake, reports, the glossary, `BACKLOG.md` (promised work)
+  — skill `use-development-steps`. `ANTI-PATTERNS.md` — «All systems» and your system's section before a core rebuild, moving folders,
+  work with processes and ports.
+- This instruction is fixed: sections 1–8 change only by the owner's word — edited in this file, then sealed with `npm run check:instruction
+  -- --seal`; the guard `check:instruction` holds the seal. No tombstones and no history in it: an outdated line is replaced or deleted,
+  history lives in git. Evolution goes only into section 9.
+- The previous full text of this instruction and the owner's draft live in the core's git history, commit `9a70131`.
 - Elements' READMEs — how to use them (graph, memory, auth and others); there also the Users tab of the sign-in element: deletion wipes
   the personal data and keeps the identifier and the journal.
 - The owner's decisions with dates — a separate journal, not in this instruction.
@@ -301,7 +301,8 @@ What this node is and how each thing is done.
   first); the node type — `node-type`; an element on or off — `element-power`; how a product or SDK works — `study-for-element`; a
   clock — `core-schedule`; page sections and blocks — `blocks-of-the-node`; colours, fonts, menus — `design-and-settings-of-elements`;
   routing a need — `route-to-element`; a new element — `create-element`; a person stuck in someone else's interface — `help-in-browser`
-  (their Chrome on this computer).
+  (their Chrome on this computer); a template release and its rollout to the elements — `release-template` (the elements' sealed
+  instruction comes from `npm run instruction:element`).
 - The rest — in the skills of the job being done: own domain — `use-domain`; analytics — `connect-google-analytics`; tools —
   `use-tools`; models — `use-ai-generation`; the messenger window — `ai-elements`; the shell, three operating systems, routes and dialogs
   are held by the guards `check:shell-kits`, `check:case`, `check:architect-routes`, `check:dialogs`.

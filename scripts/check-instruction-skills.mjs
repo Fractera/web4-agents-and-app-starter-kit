@@ -20,6 +20,10 @@ for (const m of text.matchAll(/(element's )?\b[Ss]kills? ((?:`[a-z0-9][a-z0-9-]*
   if (m[1]) continue
   for (const n of m[2].matchAll(/`([a-z0-9][a-z0-9-]*)`/g)) named.add(n[1])
 }
+// Section 8 lists the main agent's own skills as «a job — `name`», which the pattern above never reads: the whole list went unchecked
+// (found in federal step 621-4 — `release-template`, added there, was not counted). Names with a space or a colon (`npm run x`) do not match.
+const ownList = text.match(/Your skills, by the job:(.*?)(?= - The rest\b|$)/)
+if (ownList) for (const n of ownList[1].matchAll(/`([a-z0-9][a-z0-9-]*)`/g)) named.add(n[1])
 const missing = [...named].filter((n) => !existsSync(join(skills, n, 'SKILL.md'))).sort()
 if (missing.length) {
   for (const n of missing) console.log(`  ✗ ${n} — named by ${file.replaceAll('\\', '/').split('/').pop()}, no ${n}/SKILL.md in the skills folder`)
