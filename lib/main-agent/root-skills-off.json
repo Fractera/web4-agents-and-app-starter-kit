@@ -20,6 +20,13 @@
     "explain-this-project": "answered by this instruction and npm run contacts / card",
     "use-auth": "the auth element owns sign-in",
     "use-auth-providers": "the auth element owns sign-in providers",
-    "use-design": "the Design element owns the look; the main agent has design-and-settings-of-elements"
+    "use-design": "the Design element owns the look; the main agent has design-and-settings-of-elements",
+    "create-multilingual-content-entry": "content of the previous starter collections; listing budget (610-4)",
+    "expand-site-language": "languages are set in CONFIG; listing budget (610-4)",
+    "translate-pending": "translation pass, on request only; listing budget (610-4)",
+    "audit-broken-characters": "the guard scan-broken-characters runs in prebuild; listing budget (610-4)",
+    "persist-env-var-with-rebuild": "slot 3000 deploy of the previous line; listing budget (610-4)",
+    "use-pwa": "the guard check-pwa runs in prebuild; listing budget (610-4)",
+    "place-page-in-menu": "the core menu has its own guard check-menu; listing budget (610-4)"
   }
 }
