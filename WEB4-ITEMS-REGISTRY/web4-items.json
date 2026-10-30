@@ -189,9 +189,9 @@
       "provides": [
         "page-blocks"
       ],
-      "required": false,
-      "note": "Реестр блоков страниц по методологии shadcn: API (/r/*.json) и свой MCP (/mcp). Первый элемент вида user (297).",
-      "kind": "user",
+      "required": true,
+      "note": "Реестр блоков страниц по методологии shadcn: API (/r/*.json) и свой MCP (/mcp). Нативный элемент (605: kind core, стартует при каждом запуске).",
+      "kind": "core",
       "port": 24684,
       "address": "blocks"
     },

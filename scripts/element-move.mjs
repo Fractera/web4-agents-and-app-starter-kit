@@ -44,7 +44,10 @@ const base = join(paths.ITEMS_DIR, entry.kind === 'user' ? 'user' : 'core')
 const target = join(base, addressOf(id, ROOT))
 
 // Где элемент лежит сейчас: та папка, чей паспорт называет этот id (id-папка или прежний адрес); паспорта нет нигде — папка по id.
-const dirs = readdirSync(base, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => join(base, d.name))
+// 605 (владелец 2026-10-30: блоки — нативный элемент, а лежат в WEB4-ITEMS\user\blocks; «may be need only replace ?»): папку ищем в
+// обеих зонах — смена `kind` записи реестра переносит элемент между `user/` и `core/` этой же процедурой; цель — по `kind`.
+const dirsOf = (b) => { try { return readdirSync(b, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => join(b, d.name)) } catch { return [] } }
+const dirs = [...dirsOf(base), ...dirsOf(join(paths.ITEMS_DIR, entry.kind === 'user' ? 'core' : 'user'))]
 const source = dirs.find((d) => elementProps.elementIdOf(d) === id) // 417: обе раскладки
   ?? dirs.find((d) => d === join(base, id) && existsSync(join(d, '.install-stamp.json')))
 
