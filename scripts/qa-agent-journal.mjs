@@ -9,7 +9,7 @@
 //   сколько стоил каждый запрос — новые токены, прочитанные из кэша, выход; итог по каждому вопросу человека;
 //   какие навыки вызваны и какой у них процесс (Builder / Work / Both — по описанию навыка в папке агента);
 //   какие пути вне своей папки назвали инструменты агента.
-// Служба: id элемента (`pjq5v`), его адрес (`template`) или `build` — главный агент (`data/main-agent`).
+// Служба: id элемента (`pjq5v`), его адрес (`template`) или `build` — главный агент (корень ядра с шага 610; до него — `data/main-agent`).
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -23,7 +23,7 @@ const flag = (n) => { const i = rest.indexOf(n); return i >= 0 ? rest[i + 1] : n
 
 // Папка агента — как её выбирает узел (`_agent-kit/server/workspace.cjs`).
 function folderOf(s) {
-  if (s === 'build') return join(ROOT, 'data', 'main-agent')
+  if (s === 'build') return ROOT
   const reg = readJson(join(ROOT, 'WEB4-ITEMS-REGISTRY', 'web4-items.json'), { services: [] }).services ?? []
   const entry = reg.find((e) => e.id === s) ?? reg.find((e) => readJson(join(ROOT, 'data', 'services', e.id, 'address.json'), {})?.address === s)
   if (!entry) return null

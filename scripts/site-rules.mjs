@@ -1,5 +1,5 @@
 // npm run site-rules -- <адрес> — правила сайта до автоматического доступа (шаг 556-1): robots.txt и где читать условия.
-// Команда главного агента (data/main-agent/package.json); та же логика отвечает дверью `/api/node/site-rules` элементам.
+// Команда главного агента (package.json ядра, шаг 610); та же логика отвечает дверью `/api/node/site-rules` элементам.
 // Код выхода: 0 — robots.txt не запрещает · 2 — запрещает · 3 — неизвестно (считать закрытым) · 1 — адрес не годится.
 import { siteRules, siteRulesText } from '../lib/site-rules.mjs'
 

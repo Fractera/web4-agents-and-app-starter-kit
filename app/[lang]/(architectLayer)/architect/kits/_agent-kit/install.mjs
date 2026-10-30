@@ -135,7 +135,8 @@ const previous = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath
 // 🔒 `--update` ПОВТОРЯЕТ ПРЕЖНЮЮ УСТАНОВКУ, А НЕ СТАВИТ ЗАНОВО ПО УМОЛЧАНИЯМ. Иначе обновление мастера
 // молча переименовало бы страницы узла обратно в `claude-code` и сломало адреса, которые уже раздали.
 const namedPages = args.includes('--page')
-const workspace = asBorn ? 'born-items' : asMain || (update && previous?.workspace === 'main-agent') ? 'main-agent' : asNode || (update && previous?.workspace === 'node') ? 'node' : 'web4-item'
+// 610-5: явный флаг сильнее прежней установки — иначе --update --node оставлял бы службу в data/main-agent.
+const workspace = asBorn ? 'born-items' : asNode ? 'node' : asMain ? 'main-agent' : update && ['main-agent', 'node'].includes(previous?.workspace) ? previous.workspace : 'web4-item'
 const pages = asBorn ? [] : update && !namedPages && Array.isArray(previous?.pages) && previous.pages.length ? previous.pages : pagesFromArgs()
 
 if (workspace === 'web4-item') {

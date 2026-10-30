@@ -57,7 +57,8 @@ function copyTree(from, to) {
 
 if (cmd === 'adopt') {
   const projects = join(homedir(), '.claude', 'projects')
-  const targets = [{ id: 'build', folder: join(ROOT, 'data', 'main-agent') }]
+  // 610-5: главный агент живёт в корне ядра; его сессии до 610 — в папке проекта data/main-agent.
+  const targets = [{ id: 'build', folder: ROOT }, { id: 'build', folder: join(ROOT, 'data', 'main-agent') }]
   for (const s of registry()) {
     if (!s?.id) continue
     for (const kind of ['core', 'user']) {
@@ -75,8 +76,9 @@ if (cmd === 'adopt') {
 } else if (cmd === 'backfill') {
   // 595-6: the main agent's past sessions into the diary, once, by the same reader as the hook; a second run writes nothing.
   const { recordSession } = createRequire(import.meta.url)('../lib/agent-kit/memory/record.cjs')
-  const dir = join(homedir(), '.claude', 'projects', projectName(join(ROOT, 'data', 'main-agent')))
-  const logs = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.jsonl')).map((f) => join(dir, f)).sort((a, b) => statSync(a).mtimeMs - statSync(b).mtimeMs) : []
+  // 610-5: сессии до переезда — в папке проекта data/main-agent, после — в папке проекта корня ядра.
+  const dirs = [join(ROOT, 'data', 'main-agent'), ROOT].map((f) => join(homedir(), '.claude', 'projects', projectName(f)))
+  const logs = dirs.flatMap((dir) => (existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.jsonl')).map((f) => join(dir, f)) : [])).sort((a, b) => statSync(a).mtimeMs - statSync(b).mtimeMs)
   let total = 0
   for (const file of logs) total += recordSession(file, 'build')
   console.log(`===MEMORY_BACKFILL_OK=== ${logs.length} sessions of the main agent, ${total} lines written`)

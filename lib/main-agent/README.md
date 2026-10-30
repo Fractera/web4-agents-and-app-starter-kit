@@ -3,23 +3,23 @@
 Node step 548-4 (owner, 2026-10-19). The core's agent (service `build`, the core's menu «Main agent») routes requests to the
 elements of the node, creates a new element when nobody covers a need, and can lead an element's work for the architect.
 
-## Why its own folder
+## Where it lives (node step 610, 2026-10-30)
 
-Claude Code loads every `CLAUDE.md` above the folder it starts in, and project skills from that folder and every parent up to the
-repository root (code.claude.com/docs/en/memory, …/skills). Started in the node's root, the core's agent loaded the node's
-`CLAUDE.md` (252 361 characters, about 95 thousand tokens) and the 61 skills of the root on every request: 124 786 tokens before the
-first word. This folder is installed as its own git repository at `data/main-agent` (outside the node's git): only its own
-instruction and its three skills load, and the node's `CLAUDE.md` is excluded by `claudeMdExcludes`.
+🪦 From step 548-4 to 610 the main agent lived in its own repository folder `data/main-agent`: the node's `CLAUDE.md` was then 252 361
+characters and the root's 61 skills cost 124 786 tokens before the first word. The owner, 2026-10-29, on learning that the agent could not
+see the project it builds: «почему он не находится в корне?» — and «yes to do it». Now the service `build` runs in the core root
+(`workspace: node` in `architect/build/agent-kit.json`), reads the core's `CLAUDE.md` (step 608, about 28 thousand characters) and the
+core's code, and runs on Opus (owner, 2026-10-30).
 
 ## What is here
 
-| File | Installed as |
+| File | What it is |
 |---|---|
-| `main-agent-instruction.md` | `data/main-agent/CLAUDE.md` |
-| `skills/<name>/SKILL.md` — `route-to-element`, `create-element`, `supervise-element` | `data/main-agent/.claude/skills/<name>/SKILL.md` |
-| `package.json` — `npm run contacts · find · lagrix · create · task · state · role · supervise · person` | `data/main-agent/package.json` |
+| `root-skills-off.json` | skills of the core root the main agent does not get — written as `skillOverrides: off` into the root's `.claude/settings.local.json` by `npm run main-agent:install` |
+| `OWN-SERVICE-PROPS/` | its Automated management catalogues, installed into `data/main-agent/OWN-SERVICE-PROPS` (its data folder) |
 
-Every command is `scripts/main-agent-cli.mjs` of the node. Supervision lives in `lib/web4-items/supervision.cjs` and
+Its skills live in the core's `.claude/skills/` (`route-to-element`, `create-element`, `supervise-element` and eleven more), its commands
+in the core's `package.json` (`npm run contacts · find · card · create · task · state · supervise · person · done …`). Every command is `scripts/main-agent-cli.mjs` of the node. Supervision lives in `lib/web4-items/supervision.cjs` and
 `data/node/supervision.json`; roles in `WEB4-ITEMS-REGISTRY/roles.json` (services) and `data/node/roles.json` (assigned).
 
 ## Memory (node step 595)

@@ -1,66 +1,53 @@
-// ПАПКА ГЛАВНОГО АГЕНТА УЗЛА (узел, шаг 548-4): `npm run main-agent:install` — из `lib/main-agent/` в `data/main-agent`.
+// ГЛАВНЫЙ АГЕНТ УЗЛА ЖИВЁТ В КОРНЕ ЯДРА (узел, шаг 610, 2026-10-30): `npm run main-agent:install`.
 //
-// Почему своя папка-репозиторий: Claude Code грузит каждый CLAUDE.md выше папки запуска и навыки проекта из неё и всех родителей до
-// корня репозитория (code.claude.com/docs/en/memory, …/skills). Агент ядра, запущенный в корне узла, брал CLAUDE.md узла (252 361
-// знак) и 61 навык корня на каждом запросе — 124 786 токенов до первого слова (548-6). `data/` вне git узла, а у папки свой `.git`:
-// навыки корня сюда не доходят, CLAUDE.md узла снят `claudeMdExcludes`.
-// 🔒 Файлы агента правятся в `lib/main-agent/`; здесь они переписываются при каждой установке. Свои данные агента (`data/
-// services/build`) и чужие ключи настроек остаются. Зовут: `npm run main-agent:install` и `scripts/element-isolate.mjs`.
+// 🪦 С шага 548-4 по 610 он жил в своей папке-репозитории `data/main-agent`: корневой CLAUDE.md (тогда 252 361 знак) и 61 навык корня
+// стоили 124 786 токенов первого запроса. Владелец 2026-10-29, узнав, что агент не видит проекта, который строит: «почему он не находится
+// в корне?» — и «yes to do it». Инструкция ядра теперь ~28 тыс. знаков (шаг 608), навыки, не нужные ядру, выключены здесь.
+// Что делает установка:
+//   · `.claude/settings.local.json` корня — чужое вон (`lib/agent-kit/foreign-off.mjs`) и навыки корня из `lib/main-agent/root-skills-off.json`
+//     выключены (`skillOverrides: off`); файл локальный, вне git (`.gitignore`), и действует на любую сессию в корне — главный агент и есть она;
+//   · `.claude/launch-tools.txt` и `.claude/launch-model.txt` корня — инструменты и модель его сессии (мост, `lib/agent-kit/modes.cjs`);
+//   · `data/main-agent/` остаётся папкой его данных: каталоги «Автоматизированного управления» (`OWN-SERVICE-PROPS`), расписание `data/`;
+//     прежние копии (CLAUDE.md, package.json, навыки) оттуда убираются — их источники в git ядра.
+// Свои навыки главного агента лежат в `.claude/skills/` корня (610-4), команды — в `package.json` ядра (610-2). Зовут:
+// `npm run main-agent:install` и `scripts/element-isolate.mjs`.
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
-import { spawnSync } from 'node:child_process'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { foreignOff } from '../lib/agent-kit/foreign-off.mjs'
 
 export function installMainAgent(root) {
   const src = join(root, 'lib', 'main-agent')
-  const dst = join(root, 'data', 'main-agent')
-  if (!existsSync(join(src, 'main-agent-instruction.md'))) { console.log('===MAIN_AGENT_INSTALL_SKIP=== нет lib/main-agent'); return false }
-  mkdirSync(join(dst, '.claude', 'skills'), { recursive: true })
-  copyFileSync(join(src, 'main-agent-instruction.md'), join(dst, 'CLAUDE.md'))
-  copyFileSync(join(src, 'package.json'), join(dst, 'package.json'))
+  const data = join(root, 'data', 'main-agent')
+  if (!existsSync(join(src, 'root-skills-off.json'))) { console.log('===MAIN_AGENT_INSTALL_SKIP=== нет lib/main-agent/root-skills-off.json'); return false }
   // 558-3: каталоги «Автоматизированного управления» (события и внешние сервисы) — как у элемента; расписание `data/` своё, вне git.
-  mkdirSync(join(dst, 'OWN-SERVICE-PROPS'), { recursive: true })
-  for (const f of ['CRON.json', 'SUBSCRIPTIONS.json']) if (existsSync(join(src, 'OWN-SERVICE-PROPS', f))) copyFileSync(join(src, 'OWN-SERVICE-PROPS', f), join(dst, 'OWN-SERVICE-PROPS', f))
-  if (!existsSync(join(dst, '.gitignore'))) writeFileSync(join(dst, '.gitignore'), 'data/\n', 'utf8')
-  const want = existsSync(join(src, 'skills')) ? readdirSync(join(src, 'skills'), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name) : []
-  for (const old of readdirSync(join(dst, '.claude', 'skills'), { withFileTypes: true })) {
-    if (old.isDirectory() && !want.includes(old.name)) rmSync(join(dst, '.claude', 'skills', old.name), { recursive: true, force: true })
-  }
-  // 548-18: a SKILL.md always lands with LF. Claude Code does not parse a frontmatter with CRLF and loads the skill with empty
-  // metadata (`claude plugin validate`, measured 2026-10-20 on supervise-element); a Windows checkout gives CRLF.
-  for (const name of want) {
-    mkdirSync(join(dst, '.claude', 'skills', name), { recursive: true })
-    writeFileSync(join(dst, '.claude', 'skills', name, 'SKILL.md'), readFileSync(join(src, 'skills', name, 'SKILL.md'), 'utf8').replace(/\r\n/g, '\n'), 'utf8')
-  }
-  // 569-3: встроенные инструменты Claude Code главного агента — только те, которыми он работает (команды, свои файлы, навыки); мост читает
-  // этот файл (`lib/agent-kit/modes.cjs` `launchTools`). Замер: первый запрос 18 104 → 12 786 токенов. PowerShell есть только на Windows.
-  writeFileSync(join(dst, '.claude', 'launch-tools.txt'), `${process.platform === 'win32' ? 'Bash,PowerShell,Read,Write,Edit,Skill' : 'Bash,Read,Write,Edit,Skill'}\n`, 'utf8')
-  // 570 (закон владельца 2026-10-22, выбор «Sonnet — он пишет текст»): главный агент направляет и отвечает, код строят элементы.
-  writeFileSync(join(dst, '.claude', 'launch-model.txt'), 'sonnet\n', 'utf8')
-  // Свой корень репозитория: навыки корня узла выше него не грузятся.
-  if (!existsSync(join(dst, '.git'))) {
-    const r = spawnSync('git', ['init', '-q'], { cwd: dst, encoding: 'utf8', windowsHide: true })
-    if (r.status !== 0) { console.log(`===MAIN_AGENT_INSTALL_FAIL=== git init: ${(r.stderr || '').trim()}`); return false }
-  }
-  const file = join(dst, '.claude', 'settings.local.json')
+  mkdirSync(join(data, 'OWN-SERVICE-PROPS'), { recursive: true })
+  for (const f of ['CRON.json', 'SUBSCRIPTIONS.json']) if (existsSync(join(src, 'OWN-SERVICE-PROPS', f))) copyFileSync(join(src, 'OWN-SERVICE-PROPS', f), join(data, 'OWN-SERVICE-PROPS', f))
+  // 610-5: прежние копии папки агента; узел их больше не читает (служба build — `workspace: node`).
+  const gone = ['CLAUDE.md', 'package.json', join('.claude', 'skills')].filter((f) => existsSync(join(data, f)))
+  for (const f of gone) rmSync(join(data, f), { recursive: true, force: true })
+  // 569-3: встроенные инструменты Claude Code главного агента. 610-4: Glob и Grep — он строит код ядра.
+  mkdirSync(join(root, '.claude'), { recursive: true })
+  writeFileSync(join(root, '.claude', 'launch-tools.txt'), `${process.platform === 'win32' ? 'Bash,PowerShell,Read,Write,Edit,Glob,Grep,Skill' : 'Bash,Read,Write,Edit,Glob,Grep,Skill'}\n`, 'utf8')
+  // 🪦 570 «главный агент — sonnet» снято владельцем 2026-10-30 (шаг 610): «Opus — он строит ядро (Рекомендую)».
+  writeFileSync(join(root, '.claude', 'launch-model.txt'), 'opus\n', 'utf8')
+  const file = join(root, '.claude', 'settings.local.json')
   let s = {}
   try { s = JSON.parse(readFileSync(file, 'utf8')) } catch { /* нет файла — начинаем с пустого */ }
-  const posix = root.replace(/\\/g, '/')
-  const excludes = [join(root, 'CLAUDE.md'), `${posix}/CLAUDE.md`, `${posix.replace(/^([A-Za-z]):/, (_, d) => `/${d.toLowerCase()}`)}/CLAUDE.md`, `${posix}/CLAUDE.local.md`]
-  s.claudeMdExcludes = [...new Set([...(s.claudeMdExcludes ?? []), ...excludes])]
   // 548-13: без блока чтения вне папки — с ним каждая команда с подоболочкой ждала бы человека, а главного агента будит событие.
   s.permissions = { ...(s.permissions ?? {}) }
   delete s.permissions.blockReadsOutsideWorkingDirectories
+  delete s.claudeMdExcludes
+  const off = Object.keys(JSON.parse(readFileSync(join(src, 'root-skills-off.json'), 'utf8')).off ?? {})
   const { settings } = foreignOff()
   const { skillOverrides, enabledPlugins, ...rest } = settings
   Object.assign(s, rest)
-  s.skillOverrides = { ...(s.skillOverrides ?? {}), ...skillOverrides }
+  s.skillOverrides = { ...(s.skillOverrides ?? {}), ...skillOverrides, ...Object.fromEntries(off.map((n) => [n, 'off'])) }
   s.enabledPlugins = { ...(s.enabledPlugins ?? {}), ...enabledPlugins }
   writeFileSync(file, JSON.stringify(s, null, 2) + '\n', 'utf8')
-  const size = readFileSync(join(dst, 'CLAUDE.md'), 'utf8').length
-  console.log(`===MAIN_AGENT_INSTALL_OK=== data/main-agent: CLAUDE.md ${size} знаков, навыки: ${want.join(', ')}`)
+  const size = readFileSync(join(root, 'CLAUDE.md'), 'utf8').length
+  console.log(`===MAIN_AGENT_INSTALL_OK=== корень ядра: CLAUDE.md ${size} знаков, навыков корня выключено ${off.length}${gone.length ? `, из data/main-agent убрано: ${gone.join(', ')}` : ''}`)
   return true
 }
 
