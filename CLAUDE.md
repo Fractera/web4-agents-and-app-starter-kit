@@ -287,7 +287,9 @@ What this node is and how each thing is done.
 
 - Work records: `current-steps.md` is read first; step plans, summaries, the intake, reports, the glossary, `ANTI-PATTERNS.md` (dead ends
   and laws), `BACKLOG.md` (promised work) — skill `use-development-steps`.
-- The instruction is never edited by deletion: what is outdated is marked with a date and a reason.
+- This instruction is fixed: sections 1–8 change only by the owner's word, through the inventory of step 608, and a guard holds their
+  seal (`check:instruction`). No tombstones and no history in it: an outdated line is replaced or deleted, history lives in git. Evolution
+  goes only into section 9.
 - The previous full text of this instruction and the owner's draft live in the core's git history, commit `9a70131`; the federal
   instruction — the laws of the federal agent.
 - Elements' READMEs — how to use them (graph, memory, auth and others); there also the Users tab of the sign-in element: deletion wipes
@@ -302,3 +304,14 @@ What this node is and how each thing is done.
 - The rest — in the skills of the job being done: own domain — `use-domain`; analytics — `connect-google-analytics`; tools —
   `use-tools`; models — `use-ai-generation`; the messenger window — `ai-elements`; the shell, three operating systems, routes and dialogs
   are held by the guards `check:shell-kits`, `check:case`, `check:architect-routes`, `check:dialogs`.
+
+## 9. Evolution
+
+Rules of this section are fixed like sections 1–8; only the entries below them change.
+- The section is at most 150 lines, these rules included.
+- One entry is one line of at most 25 words: «- If <situation> — <what you do>; else <what you do>.» No else when there is no other branch.
+- An entry is added after the architect's yes in a review (self-evolution, section 4) and never contradicts sections 1–8; a change to them
+  goes to the owner.
+- An outdated entry is deleted, never marked. The section is full — propose to the owner which entries to fold into sections 1–8 or delete.
+
+Entries:
