@@ -76,7 +76,8 @@ console.log(`session ${pick.f.replace('.jsonl', '')} · last write ${new Date(pi
 const ins = rows.find((r) => r.attachment?.type === 'instructions')?.attachment
 const nodeMd = join(ROOT, 'CLAUDE.md').toLowerCase()
 for (const f of ins?.files ?? []) {
-  const leak = String(f.path).toLowerCase() === nodeMd
+  // 610-6: главный агент живёт в корне и читает инструкцию ядра по замыслу; утечка — только у агента элемента.
+  const leak = service !== 'build' && String(f.path).toLowerCase() === nodeMd
   console.log(`instruction: ${f.path} — ${(f.content ?? '').length} chars${leak ? '  ← LEAK: the node instruction' : ''}`)
 }
 const sk = rows.find((r) => r.attachment?.type === 'skill_listing')?.attachment
