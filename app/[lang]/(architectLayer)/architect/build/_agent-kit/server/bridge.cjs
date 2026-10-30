@@ -135,6 +135,17 @@ function guardHook() {
   return { matcher: 'Bash|PowerShell', hooks: [{ type: 'command', command: process.execPath, args: [file.replace(/\\/g, '/'), process.cwd().replace(/\\/g, '/')], timeout: 10 }] }
 }
 
+/**
+ * 615-2: ход работы в Telegram (`lib/agent-kit/progress.cjs`) — фоновые хуки (`async`): каждое действие — строка черновика в чате бота,
+ * ответ `reply` закрывает черновик. Агента не задерживают.
+ */
+function progressHooks(element) {
+  const file = path.join(process.cwd(), 'lib', 'agent-kit', 'progress.cjs')
+  if (!existsSync(file)) return null
+  const run = { type: 'command', command: process.execPath, args: [file.replace(/\\/g, '/'), process.cwd().replace(/\\/g, '/'), element], async: true, timeout: 30 }
+  return { PreToolUse: [{ matcher: '*', hooks: [run] }], PostToolUse: [{ matcher: 'mcp__plugin_telegram_telegram__reply', hooks: [run] }] }
+}
+
 async function spawnAgent(service, notice = () => {}, wanted = () => true, firstPrompt = '', { answerTrust = false, pass = 'main', model: chosen, hold = false, callerTells = false } = {}) {
   if (!pty) {
     notice(`[терминал недоступен: node-pty не загружен — ${ptyLoadError}]`)
@@ -191,7 +202,11 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
   const memHooks = typeof modes.memoryHooks === 'function' ? modes.memoryHooks(element, mode) : null
   // 615-1 (✗ 2026-10-30 13:22: `find .` из корня ядра — 2 минуты молчания в Telegram): главному агенту — сторож медленного поиска.
   const guard = element === MAIN_AGENT ? guardHook() : null
-  const hooks = guard ? { ...(memHooks ?? {}), PreToolUse: [...(memHooks?.PreToolUse ?? []), guard] } : memHooks
+  // 615-2: сессии с каналом — ход работы в её Telegram (владелец: «буквально потри слова на каждое событие с временем»).
+  const progress = viaChannel ? progressHooks(element) : null
+  const extra = { PreToolUse: [...(guard ? [guard] : []), ...(progress?.PreToolUse ?? [])], PostToolUse: progress?.PostToolUse ?? [] }
+  let hooks = memHooks
+  for (const [event, list] of Object.entries(extra)) if (list.length) hooks = { ...(hooks ?? {}), [event]: [...(hooks?.[event] ?? []), ...list] }
   const mem = { ...(memDir ? { autoMemoryDirectory: memDir } : {}), ...(hooks ? { hooks } : {}) }
   const ownData = path.join(process.cwd(), 'data', 'services', element)
   if (existsSync(ownData) && !args.includes(ownData)) args = ['--add-dir', ownData, ...(args.length ? args : ['--permission-mode', 'auto'])]
