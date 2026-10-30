@@ -117,7 +117,8 @@
     "skills-base": "node scripts/skills.mjs base-load",
     "check:instruction": "node scripts/check-instruction.mjs",
     "session": "node scripts/main-agent-cli.mjs session",
-    "openai-key": "node scripts/main-agent-cli.mjs openai-key"
+    "openai-key": "node scripts/main-agent-cli.mjs openai-key",
+    "transcribe": "node scripts/main-agent-cli.mjs transcribe"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.55",

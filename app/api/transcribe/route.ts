@@ -39,11 +39,13 @@ export async function POST(req: NextRequest) {
 
   const form = await req.formData().catch(() => null)
   const file = form?.get("audio") ?? form?.get("file")
+  // 617: голосовое из Telegram главному агенту — язык человека (`npm run transcribe`); голосовые поля страниц его не шлют.
+  const language = form?.get("language")
 
   const had = process.env.OPENAI_API_KEY
   process.env.OPENAI_API_KEY = key
   try {
-    const result = await transcribeAudio(file)
+    const result = await transcribeAudio(file, typeof language === "string" ? language.toLowerCase().slice(0, 2) : undefined)
     return NextResponse.json(result, { status: result.ok ? 200 : (result.status || 500) })
   } finally {
     if (had === undefined) delete process.env.OPENAI_API_KEY

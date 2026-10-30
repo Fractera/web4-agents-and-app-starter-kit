@@ -27,6 +27,7 @@
 //   telegram <id> [<ячейка> "<текст>"] — боты элемента (h2a · h2h · orders · work) или сообщение допущенным одного из них (552-6)
 //   session context|clear [<id>] · session model opus|sonnet|haiku [<id>] — заполнение контекста, очистка, смена модели сессии (620)
 //   openai-key <sk-…> [--chat <id> --message <id>] — ключ OpenAI узла: проверка дверью ядра, запись, удаление сообщения с ключом (620)
+//   transcribe <файл> [--lang xx] — голосовое человека → текст дверью распознавания ядра; нет рабочего ключа — попросить /openai_key (617)
 // 🔒 Ничего не делается само: каждую команду запускает главный агент по слову человека или по событию надзора.
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs'
@@ -452,6 +453,31 @@ if (cmd === 'openai-key') {
     ? '===OPENAI_KEY_OK=== OpenAI accepted the key; the node keeps it — voice, vectors, the deep memory and translations work again'
     : `===OPENAI_KEY_FAIL=== ${b.error === 'bad-format' ? 'this is not an OpenAI key (it starts with sk-)' : `OpenAI did not accept the key (${b.error ?? r.status})`} — the old key stays`)
   process.exit(b.ok ? 0 : 1)
+}
+
+// 617 (владелец 2026-10-30: агент «ответил что у него нету инструментов работы с аудиозапись»): голосовое человека — те же слова, что
+// текст. Модель звук не принимает (Anthropic: «Audio input is not supported»), поэтому файл уходит двери распознавания ядра
+// `/api/transcribe` (OpenAI, ключ ядра — закон 336), язык — язык человека из `person.json`. Новый элемент не нужен: способность уже
+// живёт в ядре. Владелец 18:15 того же дня: «если у нас не введён ключ OpenAI … команду через Telegram который позволяет ввести ключ» —
+// нет рабочего ключа (нет совсем или OpenAI ответил 401) → строка агенту: попросить у человека `/openai_key`.
+if (cmd === 'transcribe') {
+  const file = rest.find((a) => !a.startsWith('--'))
+  if (!file || !existsSync(file)) fail('transcribe <path of the voice note> — download it first (download_attachment)')
+  const lang = flag('--lang') || readJson(join(ROOT, 'data', 'services', 'build', 'channel', 'telegram', 'person.json'), null)?.lang || ''
+  // Telegram кладёт голосовое как .oga (Ogg Opus); OpenAI узнаёт формат по расширению и .oga не знает — тот же контейнер называется .ogg.
+  const name = (file.split(/[\\/]/).pop() || 'voice.ogg').replace(/\.(oga|opus)$/i, '.ogg')
+  const form = new FormData()
+  form.append('audio', new Blob([readFileSync(file)]), name)
+  if (/^[a-z]{2}/i.test(lang)) form.append('language', lang.slice(0, 2).toLowerCase())
+  const r = await fetch(`${CORE}/api/transcribe`, { method: 'POST', body: form, signal: AbortSignal.timeout(120_000) }).catch((err) => fail(`the core did not answer: ${err.message}`))
+  const b = await r.json().catch(() => ({}))
+  if (b.ok) { console.log(`===TRANSCRIBE_OK=== ${b.text || '(no words in the recording)'}`); process.exit(0) }
+  if (b.reason === 'no-key' || /\(401\)/.test(String(b.error ?? ''))) {
+    console.log('===TRANSCRIBE_NO_KEY=== the node has no working OpenAI key, so it cannot hear voice notes. Tell the person, in their language: send /openai_key and the key in one message — the node checks it, keeps it and deletes the message; then send the voice note again.')
+    process.exit(1)
+  }
+  console.log(`===TRANSCRIBE_FAIL=== ${b.error ?? r.status}`)
+  process.exit(1)
 }
 
 if (cmd === 'task') {

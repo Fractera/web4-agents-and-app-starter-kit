@@ -26,8 +26,9 @@ function openAiKey(): string {
 /** Язык, на котором владелец диктует: язык страницы по умолчанию — модель не гадает. */
 const defaultLanguage = () => (process.env.NEXT_PUBLIC_DEFAULT_LOCALE ?? "en").toLowerCase().slice(0, 2);
 
-/** Расшифровать записанное аудио. Возвращает структурный результат; маппинг в HTTP — забота двери. */
-export async function transcribeAudio(audio: unknown): Promise<TranscribeResult> {
+/** Расшифровать записанное аудио. Возвращает структурный результат; маппинг в HTTP — забота двери.
+ *  617: `language` — язык говорящего, если он известен (голосовое в Telegram — язык человека из `person.json`), иначе язык страницы. */
+export async function transcribeAudio(audio: unknown, language?: string): Promise<TranscribeResult> {
   const key = openAiKey();
   if (!key) return { ok: false, status: 400, error: "voice input needs the OpenAI key", reason: "no-key" };
   if (!(audio instanceof File) || audio.size === 0) return { ok: false, status: 400, error: "no audio was recorded" };
@@ -36,7 +37,7 @@ export async function transcribeAudio(audio: unknown): Promise<TranscribeResult>
   const upstream = new FormData();
   upstream.append("file", audio, audio.name || "speech.webm");
   upstream.append("model", MODEL);
-  upstream.append("language", defaultLanguage());
+  upstream.append("language", language && /^[a-z]{2}$/.test(language) ? language : defaultLanguage());
 
   const r = await fetch(OPENAI_URL, { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: upstream });
   if (!r.ok) return { ok: false, status: 502, error: `transcription failed (${r.status})` };
