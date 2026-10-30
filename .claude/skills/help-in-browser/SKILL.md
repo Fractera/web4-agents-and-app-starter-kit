@@ -19,8 +19,14 @@ The node's own screens come first: the domain and the Cloudflare key (the core's
 (`/<lang>/build/environment`, skill `persist-env-var-with-rebuild`), an element's Telegram bot (its Telegram page). The browser is for other
 people's sites: a domain registrar, Resend, Google Cloud Console, Google Docs, a form on a government or business site.
 
+## First question — where is the person?
+Telegram does not tell you whether they write from a phone or from this computer, and the browser is Chrome **on this computer**. Before any
+browser work ask one short question in their language: «Это делается в Chrome на компьютере, где работает узел. Вы сейчас за ним?» On a
+phone — suggest moving to the computer first (owner, 2026-10-30: «если ты общаешься с пользователем через мобильное устройство то такие задачи
+решить невозможно … навык должен предложить сначала перейти на общение через компьютер»): they can keep writing to you in Telegram there,
+but signing in and CAPTCHA need their hands at this computer. Start only after they say they are there; until then you may only explain.
+
 ## What must be true — say it in one message if it is not
-- The person is at this computer: the browser is Chrome on this machine. From a phone you can only explain — say so plainly.
 - Chrome is open and the Claude extension is signed in to the same claude.ai account as this node. If a browser tool answers «Browser
   extension is not connected» or «No browsers are connected», tell the person what to check, once; do not retry in a loop.
 - Signing in and CAPTCHA are theirs: at a login page or a CAPTCHA, stop and ask them to do it in that tab, then continue.
