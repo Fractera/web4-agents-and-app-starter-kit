@@ -120,7 +120,7 @@ function firstTaskPrompt(task, viaChannel) {
     `Start the work only after they answer yes.`
 }
 
-async function spawnAgent(service, notice = () => {}, wanted = () => true, firstPrompt = '', { answerTrust = false, pass = 'main' } = {}) {
+async function spawnAgent(service, notice = () => {}, wanted = () => true, firstPrompt = '', { answerTrust = false, pass = 'main', model: chosen } = {}) {
   if (!pty) {
     notice(`[терминал недоступен: node-pty не загружен — ${ptyLoadError}]`)
     return { ok: false, reason: 'pty-unavailable' }
@@ -211,7 +211,8 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
   // кириллицей доходит через node-pty байт в байт (замерено тем же днём).
   // 551-7: поручение, начатое с «-», `claude` прочёл бы флагом — пробел впереди оставляет его текстом.
   // 570: модель по роду работы (`lib/agent-kit/modes.cjs` `launchModel`) — один флаг с одним значением, до поручения.
-  const model = typeof modes.launchModel === 'function' ? modes.launchModel(cwd, mode, pass) : null
+  // 611: модель с кнопки Telegram сильнее модели папки и рода работы — только из закрытого списка.
+  const model = ['opus', 'sonnet', 'haiku'].includes(chosen) ? chosen : typeof modes.launchModel === 'function' ? modes.launchModel(cwd, mode, pass) : null
   if (model) args = [...args, '--model', model]
   // 590-5: команда элемента `npm run pass` узнаёт проход своей сессии из окружения и не переключает сессию на тот же проход.
   if (modes.hasGroups(cwd) && mode === 'build') env = { ...env, FRACTERA_PASS: pass }
@@ -437,7 +438,7 @@ function pasteWhenReady(s, text, { quietMs = 3000, maxMs = 120_000 } = {}) {
  * РАЗБУДИТЬ АГЕНТА СЛУЖБЫ БЕЗ БРАУЗЕРА (409-1). Сессия жива — только вставить текст. Свободной памяти меньше нормы на сессию —
  * отказ с цифрами, ничего не рождается (задача ждёт). Открытая потом страница терминала видит этот же экран.
  */
-async function wake(element, { text, from, about, declineUrl, confirmed, taskUrls = [] } = {}) {
+async function wake(element, { text, from, about, declineUrl, confirmed, taskUrls = [], model } = {}) {
   const urls = [declineUrl, ...taskUrls].filter(Boolean)
   // 552-4 (владелец 2026-10-20: «каждый из этих процессов может отправлять первое слово»): у элемента с группами навыков запрос
   // идёт в сессию своего процесса по первому слову; слова нет — строительство, и это пишется в журнал узла. Ключ сессии
@@ -473,7 +474,7 @@ async function wake(element, { text, from, about, declineUrl, confirmed, taskUrl
   const freeMb = Math.floor(os.freemem() / MB)
   const per = perSessionMb()
   if (freeMb < per) return { ok: false, reason: 'memory', freeMb, perSessionMb: per }
-  const r = await spawnAgent(service, undefined, undefined, text && task ? `${text}\n\n${finishRule(service)}` : '', { pass })
+  const r = await spawnAgent(service, undefined, undefined, text && task ? `${text}\n\n${finishRule(service)}` : '', { pass, model })
   if (!r.ok) return { ok: false, reason: r.reason }
   rememberTasks(r.session, urls)
   // 547: агент включён пробуждением; кнопка «Включить» в Telegram — согласие и на папку.

@@ -437,6 +437,8 @@ const ASK = {
     offHuman: (a) => `Agent ${a} is off. Turn it on and pass your message to it?`,
     yourMessage: (q) => `Your message: «${q}»`,
     goCalls: 'Turn on and answer', goHuman: 'Turn on and pass',
+    // 611 (owner 2026-10-30): three buttons — the model of the session is chosen by the person.
+    goMax: 'Turn on — maximum model (Opus)', goMid: 'Turn on — medium model (Sonnet)', goEco: 'Turn on — economy model (Haiku)',
     noCalls: (c) => `Not now — ${c} gets a refusal`, noHuman: 'Not now',
     startedCalls: (a, c) => `Agent ${a} is on and answering ${c}.`,
     startedHuman: (a) => `Agent ${a} is on and got your message.`,
@@ -465,6 +467,7 @@ const ASK = {
     offHuman: (a) => `Агент ${a} выключен. Включить его и передать ему ваше сообщение?`,
     yourMessage: (q) => `Ваше сообщение: «${q}»`,
     goCalls: 'Включить и ответить', goHuman: 'Включить и передать',
+    goMax: 'Включить — максимальная модель (Opus)', goMid: 'Включить — средняя модель (Sonnet)', goEco: 'Включить — экономная модель (Haiku)',
     noCalls: (c) => `Не сейчас — ${c} получит отказ`, noHuman: 'Не сейчас',
     startedCalls: (a, c) => `Агент ${a} включён и отвечает ${c}.`,
     startedHuman: (a) => `Агент ${a} включён и получил ваше сообщение.`,
@@ -599,10 +602,14 @@ function askText(service, items, t) {
 const buttons = (p, t) => {
   const human = allHuman(p.items)
   return {
-    inline_keyboard: [[
-      { text: human ? t.goHuman : t.goCalls, callback_data: `wake:${p.id}:go` },
-      { text: human ? t.noHuman : t.noCalls(callersOf(p.items)), callback_data: `wake:${p.id}:no` },
-    ]],
+    // 611 (владелец 2026-10-30: «включить с максимальной моделью – включить со средней моделью – включить сэкономлю моделью»): модель
+    // сессии — с кнопки; по одной кнопке в строке, длинные подписи. Старая кнопка `…:go` в прежних сообщениях — модель по умолчанию.
+    inline_keyboard: [
+      [{ text: t.goMax ?? ASK.en.goMax, callback_data: `wake:${p.id}:go:opus` }],
+      [{ text: t.goMid ?? ASK.en.goMid, callback_data: `wake:${p.id}:go:sonnet` }],
+      [{ text: t.goEco ?? ASK.en.goEco, callback_data: `wake:${p.id}:go:haiku` }],
+      [{ text: human ? t.noHuman : t.noCalls(callersOf(p.items)), callback_data: `wake:${p.id}:no` }],
+    ],
   }
 }
 
@@ -664,7 +671,7 @@ async function declineCaller(url, text) {
 /** Нажатие кнопки вопроса. Только допущенный и только действующий запрос. */
 async function onButton(service, token, q) {
   const sender = String(q.from?.id ?? '')
-  const m = /^wake:([0-9a-f]+):(go|no)$/.exec(String(q.data ?? ''))
+  const m = /^wake:([0-9a-f]+):(go|no)(?::(opus|sonnet|haiku))?$/.exec(String(q.data ?? ''))
   const p = readJson(pendingFile(service), null)
   if (!access(service).allowed.includes(sender) || !m || !p || p.id !== m[1]) {
     await tg(token, 'answerCallbackQuery', { callback_query_id: q.id })
@@ -684,7 +691,7 @@ async function onButton(service, token, q) {
   }
   await tg(token, 'answerCallbackQuery', { callback_query_id: q.id, text: t.toast })
   const text = p.items.map((it) => it.text).filter(Boolean).join('\n\n')
-  const out = typeof starter === 'function' ? await starter(service, { text: text || undefined, taskUrls: p.items.map((it) => it.declineUrl).filter(Boolean) }) : { ok: false, reason: 'no-starter' }
+  const out = typeof starter === 'function' ? await starter(service, { text: text || undefined, taskUrls: p.items.map((it) => it.declineUrl).filter(Boolean), model: m[3] }) : { ok: false, reason: 'no-starter' }
   if (out.ok) {
     rmSync(pendingFile(service), { force: true })
     const startedText = human ? t.startedHuman(a) : t.startedCalls(a, c)
