@@ -57,6 +57,83 @@
       "menu": false
     },
     {
+      "id": "context",
+      "slash": "context",
+      "words": { "ru": ["сколько контекста", "заполнение контекста", "сколько осталось в окне"], "en": ["how much context", "context left", "context window"] },
+      "what": {
+        "ru": "Контекст — сколько занято в окне сессии агента, размер окна и сколько осталось",
+        "en": "Context — how much of the agent session's window is used, the window size and what is left"
+      },
+      "by": "main",
+      "run": "npm run session -- context [<element id>]"
+    },
+    {
+      "id": "prepare",
+      "slash": "prepare",
+      "words": { "ru": ["подготовь к сбросу", "подготовься к очистке", "запиши состояние перед сбросом"], "en": ["prepare to reset", "get ready to clear", "write the state before a reset"] },
+      "what": {
+        "ru": "Подготовить к сбросу — привести записи состояния в порядок, чтобы новая сессия продолжила с того же места (лёгкая замена /compact)",
+        "en": "Prepare to reset — put the state records in order so a fresh session goes on from the same place (a light /compact)"
+      },
+      "by": "any",
+      "run": "update your state record so a fresh session goes on from it — the core: development-docs/development-steps/current-steps.md (skill use-development-steps), an element: development-docs/current-step.md (skill use-development-docs); the main agent also npm run done -- --note \"<where you stopped, what is next>\"; then tell the person it is ready to clear"
+    },
+    {
+      "id": "clear",
+      "slash": "clear",
+      "words": { "ru": ["очисти контекст", "сбрось контекст", "начни с чистого листа"], "en": ["clear the context", "reset the context", "start over"] },
+      "what": {
+        "ru": "Очистить контекст — разговор с агентом начнётся заново; память узла и записи остаются",
+        "en": "Clear the context — the conversation with the agent starts over; the node's memory and records stay"
+      },
+      "by": "main",
+      "run": "npm run session -- clear [<element id>] — answer the person first: it happens when your turn ends"
+    },
+    {
+      "id": "opus",
+      "slash": "opus",
+      "words": { "ru": ["переключись на opus", "максимальная модель", "опус"], "en": ["switch to opus", "maximum model"] },
+      "what": {
+        "ru": "Opus — переключить агента на максимальную модель; разговор продолжается",
+        "en": "Opus — switch the agent to the maximum model; the conversation goes on"
+      },
+      "by": "main",
+      "run": "npm run session -- model opus [<element id>] — answer the person first: the session restarts when your turn ends"
+    },
+    {
+      "id": "sonnet",
+      "slash": "sonnet",
+      "words": { "ru": ["переключись на sonnet", "средняя модель", "сонет"], "en": ["switch to sonnet", "medium model"] },
+      "what": {
+        "ru": "Sonnet — переключить агента на среднюю модель; разговор продолжается",
+        "en": "Sonnet — switch the agent to the medium model; the conversation goes on"
+      },
+      "by": "main",
+      "run": "npm run session -- model sonnet [<element id>] — answer the person first: the session restarts when your turn ends"
+    },
+    {
+      "id": "haiku",
+      "slash": "haiku",
+      "words": { "ru": ["переключись на haiku", "экономная модель", "хайку"], "en": ["switch to haiku", "economy model"] },
+      "what": {
+        "ru": "Haiku — переключить агента на экономную модель; разговор продолжается",
+        "en": "Haiku — switch the agent to the economy model; the conversation goes on"
+      },
+      "by": "main",
+      "run": "npm run session -- model haiku [<element id>] — answer the person first: the session restarts when your turn ends"
+    },
+    {
+      "id": "openaikey",
+      "slash": "openai_key",
+      "words": { "ru": ["ключ openai", "вот ключ openai", "добавь ключ openai"], "en": ["openai key", "here is the openai key", "add the openai key"] },
+      "what": {
+        "ru": "Ключ OpenAI — пришлите /openai_key и ключ одним сообщением: узел проверит его, сохранит и удалит сообщение; ключ нужен голосу, векторам и глубокой памяти",
+        "en": "OpenAI key — send /openai_key and the key in one message: the node checks it, keeps it and deletes the message; voice, vectors and the deep memory need it"
+      },
+      "by": "main",
+      "run": "npm run openai-key -- <the key> --chat <chat_id> --message <message_id of the person's message>"
+    },
+    {
       "id": "commands",
       "slash": "commands",
       "words": { "ru": ["команды"], "en": ["commands"] },

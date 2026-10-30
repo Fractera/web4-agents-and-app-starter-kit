@@ -11,7 +11,7 @@
 // печатается в журнал и в сам терминал: молча пропавший терминал читается как «сломали вход в подписку».
 // Измерено 2026-09-22: у `node-pty@1.1.0` готовые сборки есть под Windows и macOS, под Linux — нет.
 
-const { existsSync, readFileSync, statSync, unlinkSync, writeFileSync } = require('node:fs')
+const { existsSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } = require('node:fs')
 const path = require('node:path')
 const { redeemTicket } = require('./ticket.cjs')
 const session = require('./session.cjs')
@@ -146,7 +146,7 @@ function progressHooks(element) {
   return { PreToolUse: [{ matcher: '*', hooks: [run] }], PostToolUse: [{ matcher: 'mcp__plugin_telegram_telegram__reply', hooks: [run] }] }
 }
 
-async function spawnAgent(service, notice = () => {}, wanted = () => true, firstPrompt = '', { answerTrust = false, pass = 'main', model: chosen, hold = false, callerTells = false } = {}) {
+async function spawnAgent(service, notice = () => {}, wanted = () => true, firstPrompt = '', { answerTrust = false, pass = 'main', model: chosen, hold = false, callerTells = false, continueLast = false } = {}) {
   if (!pty) {
     notice(`[терминал недоступен: node-pty не загружен — ${ptyLoadError}]`)
     return { ok: false, reason: 'pty-unavailable' }
@@ -251,6 +251,8 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
   // 611: модель с кнопки Telegram сильнее модели папки и рода работы — только из закрытого списка.
   const model = ['opus', 'sonnet', 'haiku'].includes(chosen) ? chosen : typeof modes.launchModel === 'function' ? modes.launchModel(cwd, mode, pass) : null
   if (model) args = [...args, '--model', model]
+  // 620: смена модели командой сессии — тот же разговор (`--continue`: последний разговор этой папки) на другой модели.
+  if (continueLast) args = [...args, '--continue']
   // 590-5: команда элемента `npm run pass` узнаёт проход своей сессии из окружения и не переключает сессию на тот же проход.
   if (modes.hasGroups(cwd) && mode === 'build') env = { ...env, FRACTERA_PASS: pass }
   // 587-5 (владелец 2026-10-24): «если пользователь авторизуется в Claude Code Agent а затем придёт терминал … если есть такая запись то
@@ -491,6 +493,71 @@ function pasteWhenReady(s, text, { quietMs = 3000, maxMs = 120_000, ready = null
     }, 500)
     timer.unref?.()
   })
+}
+
+/**
+ * 620: ход агента закончился — экран затих (`quietMs` без вывода: пока идёт ход, Claude Code крутит счётчик) и на нём нет вопроса
+ * (разрешение, доверие папке): Enter команды сессии ответил бы на вопрос. Обещание: true — можно действовать; false — сессии нет или
+ * экран не затих за `maxMs` (тогда ничего не делается).
+ */
+function whenIdle(s, { quietMs = 4000, maxMs = 10 * 60_000 } = {}) {
+  return new Promise((resolve) => {
+    const t0 = Date.now()
+    let last = -1
+    let since = Date.now()
+    const timer = setInterval(() => {
+      if (session.current(s.service) !== s) { clearInterval(timer); return resolve(false) }
+      if (s.buffer.length !== last) { last = s.buffer.length; since = Date.now() }
+      if (Date.now() - since >= quietMs && !promptOnScreen(s.buffer) && !trustOnScreen(s.buffer)) { clearInterval(timer); return resolve(true) }
+      if (Date.now() - t0 > maxMs) { clearInterval(timer); return resolve(false) }
+    }, 500)
+    timer.unref?.()
+  })
+}
+
+/**
+ * 620 (владелец 2026-10-30: «нужна команда очистки контекста … для переключения на модель Opus … Sonnet … haiku»): команды сессии,
+ * которые агент передаёт узлу по слову человека (`npm run session` главного агента, дверь `/api/agents/session`). Действие — после
+ * конца хода, в котором агент ответил человеку (`whenIdle`).
+ *  clear — `/clear` во вход живой сессии: тот же процесс и канал, разговор с чистого листа; память и записи остаются.
+ *  model — перезапуск с `--continue --model <m>`: тот же разговор на другой модели. 🛑 Не `/model` во вход: Claude Code сохраняет
+ *          выбор «as your default for new sessions» в `~/.claude/settings.json` человека (замерено 2026-10-30, проба scratchpad 620).
+ */
+const SESSION_MODELS = ['opus', 'sonnet', 'haiku']
+/** Был ли в папке разговор, который `--continue` продолжит: журналы Claude Code `~/.claude/projects/<папка>/` (правило имени — как у `qa:agent`). */
+function hasConversation(cwd) {
+  try {
+    const dir = path.join(os.homedir(), '.claude', 'projects', String(cwd).replace(/[:\\/]/g, '-'))
+    return readdirSync(dir).some((f) => f.endsWith('.jsonl'))
+  } catch { return false }
+}
+function sessionCommand(service, { action, model } = {}) {
+  const live = session.current(service)
+  if (!live) return { ok: false, reason: 'no-session' }
+  if (action === 'clear') {
+    void whenIdle(live).then((idle) => {
+      if (!idle) return console.log(`[agents/session] ${service}: clear не выполнен — экран не затих или сессии уже нет`)
+      live.proc.write('\x1b[200~/clear\x1b[201~')
+      for (const ms of [400, 2500]) setTimeout(() => { if (session.current(service) === live) live.proc.write('\r') }, ms)
+      console.log(`[agents/session] ${service}: /clear — контекст очищен`)
+    })
+    return { ok: true, scheduled: 'clear' }
+  }
+  if (action === 'model') {
+    if (!SESSION_MODELS.includes(model)) return { ok: false, reason: `model must be one of ${SESSION_MODELS.join(', ')}` }
+    void whenIdle(live).then(async (idle) => {
+      if (!idle) return console.log(`[agents/session] ${service}: смена модели не выполнена — экран не затих или сессии уже нет`)
+      const pass = live.pass
+      const continueLast = hasConversation(live.cwd)
+      session.stop(service, 'model-switch')
+      // Процесс завершается не мгновенно, а новая сессия той же службы при живой старой не рождается (`session.current`).
+      await new Promise((r) => setTimeout(r, 1500))
+      const r = await spawnAgent(service, undefined, undefined, '', { model, pass, continueLast })
+      console.log(`[agents/session] ${service}: модель → ${model}, ${r.ok ? (continueLast ? 'тот же разговор продолжен' : 'разговора не было — новая сессия') : `не запустилась — ${r.reason}`}`)
+    })
+    return { ok: true, scheduled: 'model', model }
+  }
+  return { ok: false, reason: 'action must be clear or model' }
 }
 
 /**
@@ -895,4 +962,4 @@ function onConnection(ws, service) {
   }
 }
 
-module.exports = { onConnection, spawnAgent, wake, done, answerTrust, finishRule, shellPath, shellEnv, ptyLoadError: () => ptyLoadError, hasPty: () => pty !== null }
+module.exports = { onConnection, spawnAgent, wake, done, answerTrust, sessionCommand, finishRule, shellPath, shellEnv, ptyLoadError: () => ptyLoadError, hasPty: () => pty !== null }

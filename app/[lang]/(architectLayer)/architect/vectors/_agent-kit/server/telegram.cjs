@@ -289,9 +289,19 @@ async function idleTick(service) {
       await answerTrustHere(service, token, msg.chat.id)
       continue
     }
-    const d = activated ? { do: 'status' } : idleDecision(msg)
+    const d = activated ? { do: 'status' } : idleDecision(msg, service)
     if (d.do === 'list') {
       await tg(token, 'sendMessage', { chat_id: msg.chat.id, text: await commandsText(service), disable_web_page_preview: true })
+      continue
+    }
+    // 620: ключ OpenAI в чате спящего главного агента — узел сохраняет его сам и удаляет сообщение; ни агенту, ни в файлы бота ключ не идёт.
+    if (d.do === 'openai-key') {
+      const t = await askTable(service)
+      const saved = await saveOpenAiKey(d.key)
+      const gone = await tg(token, 'deleteMessage', { chat_id: msg.chat.id, message_id: msg.message_id })
+      const said = (saved.ok ? (t.keySaved ?? ASK.en.keySaved) : (t.keyRejected ?? ASK.en.keyRejected)(saved.error)) + (gone.ok ? '' : ` ${t.keyNotDeleted ?? ASK.en.keyNotDeleted}`)
+      await tg(token, 'sendMessage', { chat_id: msg.chat.id, text: said })
+      console.log(`[telegram] ${service}: ключ OpenAI из чата — ${saved.ok ? 'сохранён' : `не принят (${saved.error})`}, сообщение ${gone.ok ? 'удалено' : 'не удалено'}`)
       continue
     }
     if (d.do !== 'status' && (await claudeSignedIn()) !== false) {
@@ -302,9 +312,15 @@ async function idleTick(service) {
         await tg(token, 'sendMessage', { chat_id: msg.chat.id, text: (t.alreadyOff ?? ASK.en.alreadyOff)(a) })
         continue
       }
+      // 620: очистить контекст, показать его или подготовить к сбросу выключенному агенту — нечего: контекста нет, будить незачем.
+      if (d.do === 'off-session') {
+        await tg(token, 'sendMessage', { chat_id: msg.chat.id, text: (t.offSession ?? ASK.en.offSession)(a) })
+        continue
+      }
       // 597-4: «включить» — само согласие человека: агент стартует без поручения (ноль токенов), вопроса с кнопками нет.
+      // 620: «/opus», «/sonnet», «/haiku» спящему агенту — то же согласие, сразу на этой модели (как кнопки 611).
       if (d.do === 'start') {
-        let out = typeof starter === 'function' ? await starter(service, {}) : { ok: false, reason: 'no-starter' }
+        let out = typeof starter === 'function' ? await starter(service, d.model ? { model: d.model } : {}) : { ok: false, reason: 'no-starter' }
         // 614-1: «включён — пишите ему» — только когда встал канал; не встал — сессия уже закрыта, человеку «Извините…».
         const ch = out.ok && typeof out.channelReady === 'function' ? await out.channelReady() : null
         if (ch && !ch.up) out = { ok: false, reason: ch.reason === 'channel' ? 'channel' : 'session-ended', waited: ch.waited }
@@ -453,6 +469,11 @@ const ASK = {
     toast: 'Turning on…',
     moved: '↓ More questions came — the updated question is below.',
     alreadyOff: (a) => `Agent ${a} is already off.`,
+    // 620: session commands to a sleeping agent and the OpenAI key sent to the main agent's chat.
+    offSession: (a) => `Agent ${a} is off — its context is empty; the next conversation starts from a clean page.`,
+    keySaved: 'OpenAI accepted the key — the node keeps it, and the message with the key is deleted.',
+    keyRejected: (why) => `OpenAI did not accept the key (${why}) — the old key stays.`,
+    keyNotDeleted: 'The bot could not delete the message with the key — delete it yourself.',
     trustLine: 'Its folder is not trusted in Claude Code yet — «Turn on» trusts it as well.',
     waitingTerminal: (a, link) => `Agent ${a} is waiting for your answer in the terminal: ${link}`,
     // 597-4: «turn on» typed to a sleeping agent's bot — the agent starts with no task.
@@ -485,6 +506,10 @@ const ASK = {
     toast: 'Включаю…',
     moved: '↓ Пришли ещё вопросы — обновлённый вопрос ниже.',
     alreadyOff: (a) => `Агент ${a} уже выключен.`,
+    offSession: (a) => `Агент ${a} выключен — контекст пуст, следующий разговор начнётся с чистого листа.`,
+    keySaved: 'OpenAI принял ключ — узел его сохранил, сообщение с ключом удалено.',
+    keyRejected: (why) => `OpenAI не принял ключ (${why}) — остаётся прежний.`,
+    keyNotDeleted: 'Бот не смог удалить сообщение с ключом — удалите его сами.',
     trustLine: 'Его папка ещё не подтверждена в Claude Code — «Включить» подтвердит и её.',
     waitingTerminal: (a, link) => `Агент ${a} ждёт вашего ответа в терминале: ${link}`,
     onNow: (a) => `Агент ${a} включён — пишите ему.`,
@@ -544,21 +569,42 @@ function thingOf(msg) {
  * «включить» / /on → the agent starts with no task; «выключи» → it is already off; a text or a thing (photo, document, voice…, with its
  * caption) → into the question «turn on and pass?», as before — now with the thing; /start, /help, /status and other slashes → the status.
  */
-function idleDecision(msg) {
+function idleDecision(msg, service) {
   const text = String(msg?.text ?? msg?.caption ?? '').trim()
   const thing = thingOf(msg)
+  // 620: an OpenAI key in the main agent's chat — the node keeps it itself (a pattern this exact cannot be a phrase: no miss, no false hit).
+  const key = service === 'build' ? text.match(OPENAI_KEY)?.[0] : null
+  if (key) return { do: 'openai-key', key }
   let cmds = null
   try { cmds = nodeCommands() } catch { /* no list — the old behaviour */ }
   if (!thing) {
     const bare = cmds ? cmds.bareOf(text) : null
     if (bare === 'commands') return { do: 'list' }
     if (bare === 'on') return { do: 'start' }
+    if (['opus', 'sonnet', 'haiku'].includes(bare)) return { do: 'start', model: bare }
+    if (['clear', 'context', 'prepare'].includes(bare)) return { do: 'off-session' }
     if (bare === 'off' || OFF_WORDS.test(text)) return { do: 'already-off' }
     // A slash command of the node's list with words («/remember …») is a message; any other slash — the status, as before.
     if (text.startsWith('/') && !(cmds && cmds.slashOf(text))) return { do: 'status' }
   }
   if (text || thing) return { do: 'message', text, thing }
   return { do: 'status' }
+}
+
+const OPENAI_KEY = /\bsk-[A-Za-z0-9_-]{20,300}/
+/**
+ * 620: the key goes through the core's own door `/api/architect/environment` (loopback, as `npm run openai-key`): OpenAI is asked for real
+ * before anything is written, a refusal leaves the file untouched. → { ok } | { ok: false, error }.
+ */
+async function saveOpenAiKey(key) {
+  const port = readJson(path.join(ROOT, 'logs', 'runtime.json'), {})?.port ?? 24680
+  try {
+    const r = await fetch(`http://localhost:${port}/api/architect/environment`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'core', name: 'OPENAI_API_KEY', value: key }), signal: AbortSignal.timeout(30_000) })
+    const b = await r.json().catch(() => ({}))
+    return b.ok ? { ok: true } : { ok: false, error: String(b.error ?? r.status) }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+  }
 }
 
 /** The list of the node's commands in the person's language (ru and en built in, any other — translated once and cached). */

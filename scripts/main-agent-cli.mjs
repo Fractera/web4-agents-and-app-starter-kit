@@ -25,12 +25,15 @@
 //   done [--close] [--note "<строка>"] — сказать узлу «закончил» (или закрыть свою сессию) без чтения ключей узла; `--note` — где
 //                              остановился, с неё начнётся твоя следующая сессия (595-7)
 //   telegram <id> [<ячейка> "<текст>"] — боты элемента (h2a · h2h · orders · work) или сообщение допущенным одного из них (552-6)
+//   session context|clear [<id>] · session model opus|sonnet|haiku [<id>] — заполнение контекста, очистка, смена модели сессии (620)
+//   openai-key <sk-…> [--chat <id> --message <id>] — ключ OpenAI узла: проверка дверью ядра, запись, удаление сообщения с ключом (620)
 // 🔒 Ничего не делается само: каждую команду запускает главный агент по слову человека или по событию надзора.
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs'
 import { randomBytes } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
+import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -375,6 +378,79 @@ if (cmd === 'telegram') {
     process.exit(0)
   }
   console.log(b.ok ? `===TELEGRAM_OK=== ${one} ${slot}: sent to ${b.sent}` : `===TELEGRAM_FAIL=== ${one} ${slot}: ${b.error ?? r.status}`)
+  process.exit(b.ok ? 0 : 1)
+}
+
+// 620 (владелец 2026-10-30: «нужна команда которая покажет количество текущая заполнение контекстного окна размер контекстного окна и
+// сколько осталось … команда очистки контекста … переключения на модель Opus … Sonnet … haiku»): заполнение читается из журнала сессии
+// (последний ответ модели: вход + кэш + выход) без модели и без двери; очистка и смена модели — дверь `/api/agents/session`, мост делает
+// их после конца хода, в котором ты ответил человеку. Окно — по модели: у Opus/Sonnet/Haiku 5.x и Fable 1 000 000 (навык claude-api,
+// таблица моделей; `/context` Claude Code на этой подписке — «32.4k/1m», замер 2026-10-30).
+const windowOf = (model) => (/(fable|mythos|opus-5|sonnet-5|haiku-5|opus-4-[678]|sonnet-4-6)/.test(model ?? '') ? 1_000_000 : /haiku-4-5/.test(model ?? '') ? 200_000 : null)
+const journalDir = (folder) => join(homedir(), '.claude', 'projects', folder.replace(/[:\\/]/g, '-'))
+if (cmd === 'session') {
+  const [what, ...args] = rest
+  const models = ['opus', 'sonnet', 'haiku']
+  const target = what === 'model' ? args[1] : args[0]
+  const e = target ? registry().find((s) => s.id === target || addressOf(s.id) === target) : null
+  if (target && !e) fail(`no element ${target} in the registry`)
+  const service = e ? e.id : 'build'
+  if (what === 'context') {
+    const folder = e ? itemDir(e.id) : ROOT
+    const dir = folder ? journalDir(folder) : null
+    const files = dir && existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.jsonl')).map((f) => ({ f, t: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.t - a.t) : []
+    if (!files.length) fail(`${service}: no session journal yet — the agent has not talked to a model in its folder`)
+    const lines = readFileSync(join(dir, files[0].f), 'utf8').split('\n')
+    let last = null
+    for (let i = lines.length - 1; i >= 0 && !last; i--) {
+      try { const row = JSON.parse(lines[i]); if (row?.type === 'assistant' && row.message?.usage) last = row } catch { /* строка не JSON */ }
+    }
+    if (!last) fail(`${service}: the session has no model answer yet — context is empty`)
+    const u = last.message.usage
+    const used = (u.input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.output_tokens ?? 0)
+    const model = String(last.message.model ?? 'unknown')
+    const win = windowOf(model)
+    const n = (x) => x.toLocaleString('en-US').replace(/,/g, ' ')
+    const sid = files[0].f.replace('.jsonl', '').slice(0, 8)
+    console.log(win
+      ? `${service}: context ${n(used)} of ${n(win)} tokens (${Math.round((used / win) * 100)} %), ${n(Math.max(0, win - used))} left · model ${model} · session ${sid}, last answer ${String(last.timestamp ?? '').slice(0, 19)}Z`
+      : `${service}: context ${n(used)} tokens · the window of model ${model} is not known to the node · session ${sid}`)
+    process.exit(0)
+  }
+  if (what === 'clear' || (what === 'model' && models.includes(args[0]))) {
+    const r = await core('/api/agents/session', { method: 'POST', body: JSON.stringify({ service, action: what, ...(what === 'model' ? { model: args[0] } : {}) }) }).catch((err) => fail(`the core did not answer: ${err.message}`))
+    const b = r.body ?? {}
+    if (!b.ok) fail(`${service}: ${b.reason === 'no-session' ? 'its agent is not on — nothing to clear or switch' : b.reason ?? r.status}`)
+    console.log(what === 'clear'
+      ? `===SESSION_OK=== ${service}: when this turn ends the conversation starts over — memory and records stay. Answer the person first.`
+      : `===SESSION_OK=== ${service}: when this turn ends the session restarts on ${args[0]} and the same conversation goes on (a few seconds; messages wait). Answer the person first.`)
+    process.exit(0)
+  }
+  fail('session context [<id>] | session clear [<id>] | session model opus|sonnet|haiku [<id>]')
+}
+
+// 620 (владелец 2026-10-30: «нужна команда которая позволит загрузить и использовать ключ OpenAI»): ключ проверяет и пишет дверь
+// ядра `/api/architect/environment` (настоящий вызов OpenAI до записи; отказ — файл не тронут). Сообщение с ключом бот удаляет из чата
+// (Bot API deleteMessage: «Bots can delete incoming messages in private chats», не позже 48 часов) — в истории Telegram ключ не остаётся.
+// Ключ никогда не печатается.
+if (cmd === 'openai-key') {
+  const key = (rest.find((a) => a.startsWith('sk-')) ?? '').trim()
+  if (!key) fail('openai-key <sk-…> [--chat <chat_id> --message <message_id>]')
+  const chat = flag('--chat')
+  const message = flag('--message')
+  if (chat && message) {
+    const tokenLine = (() => { try { return readFileSync(join(ROOT, 'data', 'services', 'build', 'channel', 'telegram', '.env'), 'utf8').split(/\r?\n/).find((l) => l.startsWith('TELEGRAM_BOT_TOKEN=')) } catch { return null } })()
+    const token = tokenLine ? tokenLine.slice('TELEGRAM_BOT_TOKEN='.length).trim() : ''
+    const del = token
+      ? await fetch(`https://api.telegram.org/bot${token}/deleteMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chat, message_id: Number(message) }), signal: AbortSignal.timeout(15_000) }).then((r) => r.json()).catch(() => null)
+      : null
+    console.log(del?.ok ? 'the message with the key is deleted from the chat' : `the message with the key was NOT deleted (${del?.description ?? 'no bot token'}) — ask the person to delete it`)
+  }
+  const r = await fetch(`${CORE}/api/architect/environment`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'core', name: 'OPENAI_API_KEY', value: key }), signal: AbortSignal.timeout(30_000) }).catch((err) => fail(`the core did not answer: ${err.message}`))
+  const b = await r.json().catch(() => ({}))
+  console.log(b.ok
+    ? '===OPENAI_KEY_OK=== OpenAI accepted the key; the node keeps it — voice, vectors, the deep memory and translations work again'
+    : `===OPENAI_KEY_FAIL=== ${b.error === 'bad-format' ? 'this is not an OpenAI key (it starts with sk-)' : `OpenAI did not accept the key (${b.error ?? r.status})`} — the old key stays`)
   process.exit(b.ok ? 0 : 1)
 }
 

@@ -115,7 +115,9 @@
     "remind": "node scripts/node-commands.mjs remind",
     "wake": "node scripts/node-commands.mjs wake",
     "skills-base": "node scripts/skills.mjs base-load",
-    "check:instruction": "node scripts/check-instruction.mjs"
+    "check:instruction": "node scripts/check-instruction.mjs",
+    "session": "node scripts/main-agent-cli.mjs session",
+    "openai-key": "node scripts/main-agent-cli.mjs openai-key"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.55",
