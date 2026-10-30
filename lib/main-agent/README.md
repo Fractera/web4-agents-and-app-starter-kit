@@ -17,6 +17,7 @@ core's code, and runs on Opus (owner, 2026-10-30).
 |---|---|
 | `root-skills-off.json` | skills of the core root the main agent does not get — written as `skillOverrides: off` into the root's `.claude/settings.local.json` by `npm run main-agent:install` |
 | `OWN-SERVICE-PROPS/` | its Automated management catalogues, installed into `data/main-agent/OWN-SERVICE-PROPS` (its data folder) |
+| `owner-decisions-on-skill-changes.md` | the journal of its skill `self-review` (federal step 571-3): the architect's answers to its proposals and the earlier decisions inherited from the developers; `npm run evolution` reads it. Here, not in `development-docs/`: a development document of the core needs a page of its own in the architect layer |
 
 Its skills live in the core's `.claude/skills/` (`route-to-element`, `create-element`, `supervise-element` and eleven more), its commands
 in the core's `package.json` (`npm run contacts · find · card · create · task · state · supervise · person · done …`). Every command is `scripts/main-agent-cli.mjs` of the node. Supervision lives in `lib/web4-items/supervision.cjs` and
