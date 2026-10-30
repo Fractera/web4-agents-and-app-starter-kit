@@ -300,7 +300,8 @@ What this node is and how each thing is done.
   `ask-element`; a capability an element lacks — `handle-need` (a bare yes or no with no question in this session — `npm run needs`
   first); the node type — `node-type`; an element on or off — `element-power`; how a product or SDK works — `study-for-element`; a
   clock — `core-schedule`; page sections and blocks — `blocks-of-the-node`; colours, fonts, menus — `design-and-settings-of-elements`;
-  routing a need — `route-to-element`; a new element — `create-element`.
+  routing a need — `route-to-element`; a new element — `create-element`; a person stuck in someone else's interface — `help-in-browser`
+  (their Chrome on this computer).
 - The rest — in the skills of the job being done: own domain — `use-domain`; analytics — `connect-google-analytics`; tools —
   `use-tools`; models — `use-ai-generation`; the messenger window — `ai-elements`; the shell, three operating systems, routes and dialogs
   are held by the guards `check:shell-kits`, `check:case`, `check:architect-routes`, `check:dialogs`.
