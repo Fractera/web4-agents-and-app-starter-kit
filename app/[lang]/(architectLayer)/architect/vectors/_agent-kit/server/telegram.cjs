@@ -304,8 +304,11 @@ async function idleTick(service) {
       }
       // 597-4: «включить» — само согласие человека: агент стартует без поручения (ноль токенов), вопроса с кнопками нет.
       if (d.do === 'start') {
-        const out = typeof starter === 'function' ? await starter(service, {}) : { ok: false, reason: 'no-starter' }
-        const said = out.ok ? (t.onNow ?? ASK.en.onNow)(a) : out.reason === 'memory' ? t.memory(a, out.freeMb, out.perSessionMb) : t.failed(a, String(out.reason ?? 'unknown'))
+        let out = typeof starter === 'function' ? await starter(service, {}) : { ok: false, reason: 'no-starter' }
+        // 614-1: «включён — пишите ему» — только когда встал канал; не встал — сессия уже закрыта, человеку «Извините…».
+        const ch = out.ok && typeof out.channelReady === 'function' ? await out.channelReady() : null
+        if (ch && !ch.up) out = { ok: false, reason: ch.reason === 'channel' ? 'channel' : 'session-ended', waited: ch.waited }
+        const said = out.ok ? (t.onNow ?? ASK.en.onNow)(a) : out.reason === 'memory' ? t.memory(a, out.freeMb, out.perSessionMb) : out.reason === 'channel' ? (t.channelFailed ?? ASK.en.channelFailed)(a, out.waited) : t.failed(a, String(out.reason ?? 'unknown'))
         await tg(token, 'sendMessage', { chat_id: msg.chat.id, text: said, disable_web_page_preview: true })
         continue
       }
@@ -458,6 +461,9 @@ const ASK = {
     trustAsk: (a) => `Agent ${a} asks to work in its own folder on this computer. Claude Code asks this once for every folder. Allow? Reply «yes».`,
     trustDone: (a) => `Done: agent ${a} works in its folder. This question will not come again.`,
     trustGone: (a) => `Agent ${a} is no longer waiting for this answer — it was answered or turned off.`,
+    // 614-1: the session was born, but its Telegram channel did not come up — the node closed it and reads the bot again.
+    channelFailed: (a, n) => `Sorry, agent ${a} could not start: its Telegram channel did not connect within ${n} seconds, so the agent is off again. Turn it on again in a couple of minutes.`,
+    channelFailedKept: (a, n) => `Sorry, agent ${a} could not start: its Telegram channel did not connect within ${n} seconds, so the agent is off again. Your message is kept — press «Turn on» again in a couple of minutes.`,
   },
   ru: {
     oneCall: (a, c) => `Агенту ${a} пришёл вопрос от агента ${c}`,
@@ -485,6 +491,8 @@ const ASK = {
     trustAsk: (a) => `Агент ${a} просит разрешения работать в своей папке на этом компьютере. Claude Code спрашивает об этом один раз для каждой папки. Разрешить? Ответьте «да».`,
     trustDone: (a) => `Готово: агент ${a} работает в своей папке. Больше этот вопрос не появится.`,
     trustGone: (a) => `Агент ${a} уже не ждёт этого ответа — вопрос закрыт или агент выключен.`,
+    channelFailed: (a, n) => `Извините, агент ${a} не смог запуститься: его канал Telegram не подключился за ${n} секунд, поэтому агент снова выключен. Включите его ещё раз через пару минут.`,
+    channelFailedKept: (a, n) => `Извините, агент ${a} не смог запуститься: его канал Telegram не подключился за ${n} секунд, поэтому агент снова выключен. Ваше сообщение сохранено — нажмите «Включить» ещё раз через пару минут.`,
   },
 }
 
@@ -692,6 +700,22 @@ async function onButton(service, token, q) {
   await tg(token, 'answerCallbackQuery', { callback_query_id: q.id, text: t.toast })
   const text = p.items.map((it) => it.text).filter(Boolean).join('\n\n')
   const out = typeof starter === 'function' ? await starter(service, { text: text || undefined, taskUrls: p.items.map((it) => it.declineUrl).filter(Boolean), model: m[3] }) : { ok: false, reason: 'no-starter' }
+  // 614-1: «получил ваше сообщение» — только когда встал канал и поручение ушло в сессию. Не встал — сессия уже закрыта, запрос остаётся
+  // (`pending.json`), кнопки переезжают под «Извините…» внизу переписки: нажмёт ещё раз — агент получит то же сообщение.
+  const ch = out.ok && typeof out.channelReady === 'function' ? await out.channelReady() : null
+  if (ch && !ch.up) {
+    const sorry = ch.reason === 'channel' ? (t.channelFailedKept ?? ASK.en.channelFailedKept)(a, ch.waited) : t.failed(a, 'session-ended')
+    for (const x of p.asked) await tg(token, 'editMessageReplyMarkup', { chat_id: x.chat, message_id: x.messageId, reply_markup: { inline_keyboard: [] } })
+    p.asked = []
+    const chats = access(service).allowed
+    for (const chat of chats) {
+      const r = await tg(token, 'sendMessage', { chat_id: chat, text: sorry, reply_markup: buttons(p, t), disable_web_page_preview: true })
+      if (r.ok && r.result?.message_id) p.asked.push({ chat, messageId: r.result.message_id })
+    }
+    writeFileSync(pendingFile(service), JSON.stringify(p, null, 2))
+    console.log(`[telegram] ${service}: сессия не дождалась канала — «Извините…» с кнопками, отправлено ${p.asked.length} из ${chats.length}`)
+    return
+  }
   if (out.ok) {
     rmSync(pendingFile(service), { force: true })
     const startedText = human ? t.startedHuman(a) : t.startedCalls(a, c)
@@ -837,6 +861,25 @@ async function tellWaiting(service) {
   return { sent, via }
 }
 
+/**
+ * 614-1: канал сессии, разбуженной без кнопки Telegram (дверь, надзор главного агента, очередь прохода), не встал — узел её уже закрыл и
+ * снова читает бота. Сказать людям бота словами; бота нет — молчать, как прежде.
+ */
+async function tellChannelFailed(service, waited) {
+  if (!connected(service)) return { sent: 0 }
+  const token = storedToken(service)
+  const t = await askTable(service)
+  const text = (t.channelFailed ?? ASK.en.channelFailed)(shortName(named(service)), waited)
+  let sent = 0
+  const chats = access(service).allowed
+  for (const chat of chats) {
+    const r = await tg(token, 'sendMessage', { chat_id: chat, text, disable_web_page_preview: true })
+    if (r?.ok) sent++
+  }
+  console.log(`[telegram] ${service}: канал не встал — «Извините…» отправлено ${sent} из ${chats.length}`)
+  return { sent }
+}
+
 // ── ДОВЕРИЕ ПАПКЕ — ВОПРОСОМ В ЧАТЕ ГЛАВНОГО АГЕНТА (604) ─────────────────────────────────────────────────────────────────────────
 //
 // Владелец 2026-10-26: «мы ставим перед собой цель чтобы пользователи могли поставить один единственный Telegram бот для главного
@@ -919,6 +962,8 @@ async function answerTrustHere(service, token, chatId) {
 module.exports = {
   // 604: доверие папке — вопросом в чате главного агента.
   tellTrust, clearTrust, trustPending, trustYes,
+  // 614-1: канал разбуженной сессии не встал.
+  tellChannelFailed,
   // 552-6: помощники и правило имени для ячеек ботов (`telegram-slots.cjs`).
   tg, readJson, writeSecret, NODE_CODE, namedSuggestion, hasSkillGroups,
   PLUGIN, isService, stateDir, storedToken, saveToken, activationLink, saveMessages, channelLaunch,

@@ -11,7 +11,7 @@
 // печатается в журнал и в сам терминал: молча пропавший терминал читается как «сломали вход в подписку».
 // Измерено 2026-09-22: у `node-pty@1.1.0` готовые сборки есть под Windows и macOS, под Linux — нет.
 
-const { existsSync, readFileSync, unlinkSync, writeFileSync } = require('node:fs')
+const { existsSync, readFileSync, statSync, unlinkSync, writeFileSync } = require('node:fs')
 const path = require('node:path')
 const { redeemTicket } = require('./ticket.cjs')
 const session = require('./session.cjs')
@@ -28,6 +28,11 @@ const INIT_DEADLINE_MS = 10_000
 const CLOSE_POLICY = 1008
 /** 551-7: длина задачи из ссылки — та же, что у окна вставки (`core/client/terminal-paste.mjs`, PASTE_LIMIT). */
 const TASK_LIMIT = 20_000
+/**
+ * 614-1: сколько сессия, разбуженная с ботом, ждёт свой канал Telegram — столько же, сколько сам Claude Code ждёт подключения сервера
+ * MCP (30 с, журнал `--debug mcp`, см. `telegram.cjs` `preparePlugin`); подключение плагина замерено на +1,1…+7,3 с. Переменная — для прибора.
+ */
+const channelWaitMs = () => Number(process.env.AGENT_CHANNEL_WAIT_MS) || 30_000
 
 let pty = null
 let ptyLoadError = ''
@@ -120,7 +125,7 @@ function firstTaskPrompt(task, viaChannel) {
     `Start the work only after they answer yes.`
 }
 
-async function spawnAgent(service, notice = () => {}, wanted = () => true, firstPrompt = '', { answerTrust = false, pass = 'main', model: chosen } = {}) {
+async function spawnAgent(service, notice = () => {}, wanted = () => true, firstPrompt = '', { answerTrust = false, pass = 'main', model: chosen, hold = false, callerTells = false } = {}) {
   if (!pty) {
     notice(`[терминал недоступен: node-pty не загружен — ${ptyLoadError}]`)
     return { ok: false, reason: 'pty-unavailable' }
@@ -188,19 +193,21 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
   // Поэтому сессия без канала запускается с плагином, выключенным на этот запуск, — падать нечему. После `--add-dir`: тот забирает
   // папки до следующего флага, а `viaChannel` уже посчитан.
   // 552-4: у элемента с группами навыков `--settings` несёт и группы режима (`lib/agent-kit/modes.cjs`); у остальных — как прежде.
-  const off = viaChannel ? {} : { [telegram.PLUGIN]: false }
+  // 614-2 (✗ 2026-10-30: сессия Claude Code, открытая человеком в другой папке, уронила глобально включённый плагин без токена — и
+  // главный агент час жил без канала): плагин у человека выключен глобально, а сессия С каналом включает его себе явно. Проба 614-2:
+  // `--settings` включает плагин, выключенный ниже по приоритету; один `--channels` — нет.
+  const plug = { [telegram.PLUGIN]: viaChannel }
   // 552-5: системная подсказка сессии — фраза режима и, если у элемента есть `.claude/modes/<режим>.md`, законы режима (одним файлом).
   // 590-5: у сессии строительства — свой проход (`main` · `design` · `texts`): свои вендорные навыки, файл законов прохода, модель.
   // 594-4: у прохода study — сервер MCP REA на эту сессию (`modes.mcpArgs`); перед `--settings`: `--mcp-config` забирает список значений.
   const mcp = typeof modes.mcpArgs === 'function' ? modes.mcpArgs(cwd, mode, path.join(process.cwd(), 'data', 'node', 'agent-prompts'), service, pass) : []
-  if (modes.hasGroups(cwd)) args = [...args, ...mcp, '--settings', JSON.stringify({ ...modes.modeSettings(cwd, mode, off, pass), ...mem }), ...modes.promptArgs(cwd, mode, path.join(process.cwd(), 'data', 'node', 'agent-prompts'), service, pass)]
+  if (modes.hasGroups(cwd)) args = [...args, ...mcp, '--settings', JSON.stringify({ ...modes.modeSettings(cwd, mode, plug, pass), ...mem }), ...modes.promptArgs(cwd, mode, path.join(process.cwd(), 'data', 'node', 'agent-prompts'), service, pass)]
   else {
     // 595-4: the skills memory (skills_find) also for the main agent and an element of the old template; the soul's
     // --append-system-prompt-file below always follows, so the list flag never eats the first task (548-13).
     if (mcp.length) args = [...args, ...mcp]
-    // 595-5: one --settings per session; with the channel it must not turn the Telegram plugin off (548-20).
-    if (!viaChannel) args = [...args, '--settings', JSON.stringify({ enabledPlugins: off, ...mem })]
-    else if (Object.keys(mem).length) args = [...args, '--settings', JSON.stringify(mem)]
+    // 595-5: one --settings per session; 614-2: it always says whether the Telegram plugin runs in it.
+    args = [...args, '--settings', JSON.stringify({ enabledPlugins: plug, ...mem })]
   }
   // 591: душа узла (`lib/agent-kit/soul.md`) — в системной подсказке каждой сессии: у элемента с группами её кладёт `promptArgs`
   // первой, у остальных (главный агент, элемент старого шаблона) — здесь, одна.
@@ -225,7 +232,10 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
     const task = takeFirstTask()
     if (task) firstPrompt = firstTaskPrompt(task, viaChannel)
   }
-  if (firstPrompt) args = [...args, firstPrompt.startsWith('-') ? ` ${firstPrompt}` : firstPrompt]
+  // 614-1: у сессии, разбуженной с ботом, первое поручение ждёт её канал (`watchChannel`): аргументом оно ушло бы раньше плагина.
+  const holdFirst = hold && viaChannel
+  if (firstPrompt && !holdFirst) args = [...args, firstPrompt.startsWith('-') ? ` ${firstPrompt}` : firstPrompt]
+  const t0 = Date.now()
   let child
   try {
     child = pty.spawn(bin, args, { cols: 120, rows: 32, cwd, env, name: 'xterm-256color' })
@@ -253,6 +263,7 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
     session.exited(born)
     startQueuedPass(element)
   })
+  if (holdFirst) watchChannel(born, element, firstPrompt, { t0, callerTells })
   return { ok: true, session: born }
 }
 
@@ -411,34 +422,112 @@ const MB = 1024 * 1024
 /** Память на одну сессию (владелец 2026-10-05: «примерно 300 МБ свободной памяти на один терминал»); переменная — для прибора. */
 const perSessionMb = () => Number(process.env.AGENT_SESSION_MB) || 300
 
-/** Вставить текст во вход агента, когда его экран затих (интерфейс поднялся): вставкой в скобках, затем Enter. */
-function pasteWhenReady(s, text, { quietMs = 3000, maxMs = 120_000 } = {}) {
-  const t0 = Date.now()
-  let last = -1
-  let since = Date.now()
-  const timer = setInterval(() => {
-    if (session.current(s.service) !== s) return clearInterval(timer)
-    const len = s.buffer.length
-    if (len !== last) {
-      last = len
-      since = Date.now()
-    }
-    if ((len > 0 && Date.now() - since >= quietMs) || Date.now() - t0 > maxMs) {
+/**
+ * Вставить текст во вход агента, когда его экран затих (интерфейс поднялся): вставкой в скобках, затем Enter.
+ * 614-1: `ready` — ещё условие; с ним по истечении `maxMs` текст не вставляется (Enter ответил бы на вопрос, который стоит на экране).
+ * Обещание: true — вставлено, false — не вставлено (сессии нет или вопрос не ушёл с экрана).
+ */
+function pasteWhenReady(s, text, { quietMs = 3000, maxMs = 120_000, ready = null } = {}) {
+  return new Promise((resolve) => {
+    const t0 = Date.now()
+    let last = -1
+    let since = Date.now()
+    const timer = setInterval(() => {
+      if (session.current(s.service) !== s) {
+        clearInterval(timer)
+        return resolve(false)
+      }
+      const len = s.buffer.length
+      if (len !== last) {
+        last = len
+        since = Date.now()
+      }
+      const late = Date.now() - t0 > maxMs
+      if (late && ready && !ready()) {
+        clearInterval(timer)
+        console.log(`[agents/wake] ${s.service}: поручение не вставлено — ${Math.round(maxMs / 1000)} с на экране стоит вопрос`)
+        return resolve(false)
+      }
+      if ((len > 0 && Date.now() - since >= quietMs && (!ready || ready())) || late) {
+        clearInterval(timer)
+        s.proc.write(`\x1b[200~${text}\x1b[201~`)
+        // 409-3: один Enter через 400 мс терялся у сессии с каналом Telegram (экран владельца: задача стоит во вводе, не
+        // отправлена). Повтор безопасен: пустой Enter в Claude Code ничего не делает.
+        for (const ms of [400, 2500, 6000]) setTimeout(() => { if (session.current(s.service) === s) s.proc.write('\r') }, ms)
+        resolve(true)
+      }
+    }, 500)
+    timer.unref?.()
+  })
+}
+
+/**
+ * 614-1 (владелец 2026-10-30: «if we can catch error , we must return : Sorry , agent can not start ...»): сессия, разбуженная с ботом
+ * Telegram, получает первое поручение только когда встал её канал. ✗ 2026-10-30 дважды: в 10:05 плагин не стартовал вовсе (чужая сессия
+ * отравила общий кэш отказов MCP) — час молчания; в 12:28 первое сообщение ушло аргументом `claude` за 8 с до канала, инструменты
+ * Telegram к модели не пришли — три ответа ушли в терминал. Признак канала — свежий `bot.pid` плагина (telegram 0.0.7 пишет свой pid
+ * прямо перед рукопожатием MCP, server.ts:78) с живым процессом и 2 с на рукопожатие, как у `npm run person` (592-2). Свежий —
+ * записан после старта сессии: убитая сессия свой файл не стирает, а Windows отдаёт номер другому процессу. Вставленное после
+ * подключения — ввод человека, к нему Claude Code прикладывает инструменты канала (замерено 592-2). Не встал за `channelWaitMs` (пока
+ * на экране вопрос доверия папке, часы стоят) — сессия закрывается, бота снова читает узел (`telegram.running`), человеку «Извините…»
+ * (здесь или у того, кто ждёт `channelReady`). Ноль токенов: модель о неудаче не узнаёт.
+ */
+function watchChannel(s, element, held, { t0, callerTells }) {
+  const pidFile = path.join(telegram.stateDir(element), 'bot.pid')
+  let deadline = Date.now() + channelWaitMs()
+  s.channelReady = new Promise((resolve) => {
+    const timer = setInterval(() => {
+      if (session.current(s.service) !== s) {
+        clearInterval(timer)
+        return resolve({ up: false, reason: 'gone' })
+      }
+      const up = freshPid(pidFile, t0)
+      if (up) {
+        clearInterval(timer)
+        const t = setTimeout(() => {
+          if (session.current(s.service) !== s) return resolve({ up: false, reason: 'gone' })
+          const seconds = Math.round((Date.now() - t0) / 100) / 10
+          console.log(`[agents/wake] ${s.service}: канал Telegram встал за ${seconds} с${held ? ' — поручение уходит в сессию' : ''}`)
+          if (!held) return resolve({ up: true, seconds })
+          // «получил ваше сообщение» человеку — только после вставки (✗ прибор 614: без этого оно опережало вставку на 2 с).
+          void pasteWhenReady(s, held, { quietMs: 1500, ready: () => !trustOnScreen(s.buffer) && !promptOnScreen(s.buffer) })
+            .then((pasted) => resolve(session.current(s.service) === s ? { up: true, seconds, pasted } : { up: false, reason: 'gone' }))
+        }, Math.max(0, up.at + 2000 - Date.now()))
+        t.unref?.()
+        return
+      }
+      if (trustOnScreen(s.buffer)) deadline = Date.now() + channelWaitMs()
+      if (Date.now() < deadline) return
       clearInterval(timer)
-      s.proc.write(`\x1b[200~${text}\x1b[201~`)
-      // 409-3: один Enter через 400 мс терялся у сессии с каналом Telegram (экран владельца: задача стоит во вводе, не
-      // отправлена). Повтор безопасен: пустой Enter в Claude Code ничего не делает.
-      for (const ms of [400, 2500, 6000]) setTimeout(() => { if (session.current(s.service) === s) s.proc.write('\r') }, ms)
-    }
-  }, 500)
-  timer.unref?.()
+      const waited = Math.round(channelWaitMs() / 1000)
+      console.log(`[agents/wake] ${s.service}: канал Telegram не встал за ${waited} с — сессия закрыта, бота снова читает узел`)
+      session.stop(s.service, 'channel-failed')
+      if (!callerTells) void telegram.tellChannelFailed(element, waited).catch(() => {})
+      resolve({ up: false, reason: 'channel', waited })
+    }, 250)
+    timer.unref?.()
+  })
+}
+
+/** Живой pid плагина из `bot.pid`, записанного не раньше `since`, — или null. */
+function freshPid(file, since) {
+  try {
+    const st = statSync(file)
+    if (st.mtimeMs < since - 500) return null
+    const pid = Number(readFileSync(file, 'utf8'))
+    if (!(pid > 1)) return null
+    process.kill(pid, 0)
+    return { pid, at: st.mtimeMs }
+  } catch {
+    return null
+  }
 }
 
 /**
  * РАЗБУДИТЬ АГЕНТА СЛУЖБЫ БЕЗ БРАУЗЕРА (409-1). Сессия жива — только вставить текст. Свободной памяти меньше нормы на сессию —
  * отказ с цифрами, ничего не рождается (задача ждёт). Открытая потом страница терминала видит этот же экран.
  */
-async function wake(element, { text, from, about, declineUrl, confirmed, taskUrls = [], model } = {}) {
+async function wake(element, { text, from, about, declineUrl, confirmed, taskUrls = [], model, callerTells = false } = {}) {
   const urls = [declineUrl, ...taskUrls].filter(Boolean)
   // 552-4 (владелец 2026-10-20: «каждый из этих процессов может отправлять первое слово»): у элемента с группами навыков запрос
   // идёт в сессию своего процесса по первому слову; слова нет — строительство, и это пишется в журнал узла. Ключ сессии
@@ -474,7 +563,8 @@ async function wake(element, { text, from, about, declineUrl, confirmed, taskUrl
   const freeMb = Math.floor(os.freemem() / MB)
   const per = perSessionMb()
   if (freeMb < per) return { ok: false, reason: 'memory', freeMb, perSessionMb: per }
-  const r = await spawnAgent(service, undefined, undefined, text && task ? `${text}\n\n${finishRule(service)}` : '', { pass, model })
+  // 614-1: `hold` — у сессии с ботом поручение ждёт её канал; `callerTells` — о неудаче канала человеку скажет вызывающий (кнопка Telegram).
+  const r = await spawnAgent(service, undefined, undefined, text && task ? `${text}\n\n${finishRule(service)}` : '', { pass, model, hold: true, callerTells })
   if (!r.ok) return { ok: false, reason: r.reason }
   rememberTasks(r.session, urls)
   // 547: агент включён пробуждением; кнопка «Включить» в Telegram — согласие и на папку.
@@ -488,7 +578,8 @@ async function wake(element, { text, from, about, declineUrl, confirmed, taskUrl
     const timer = setTimeout(() => { if (session.current(service) === born) telegram.askToClose(service, 'timeout', { reviewed: Boolean(born.reviewed) }) }, wakeTimeoutMs())
     timer.unref?.()
   }
-  return { ok: true, started: true, freeMb, perSessionMb: per }
+  // 614-1: функция, а не обещание — дверь `/api/agents/wake` отдаёт этот ответ в JSON, и функция в нём просто пропадает.
+  return { ok: true, started: true, freeMb, perSessionMb: per, ...(born.channelReady ? { channelReady: () => born.channelReady } : {}) }
 }
 
 const wakeTimeoutMs = () => Number(process.env.AGENT_WAKE_TIMEOUT_MS) || 60 * 60 * 1000
@@ -590,7 +681,8 @@ function forgetWokenByMain(id) {
 }
 
 // 409-3: кнопка «Запустить» в Telegram рождает сессию этим же путём, уже с подтверждением.
-telegram.setStarter((service, opts) => wake(service, { ...opts, confirmed: true }))
+// 614-1: и о неудаче канала человеку говорит она же (`telegram.cjs`, `onButton` и «включить»), поэтому `callerTells`.
+telegram.setStarter((service, opts) => wake(service, { ...opts, confirmed: true, callerTells: true }))
 
 /** Принять сокет службы — его отдаёт общее подключение узла (`lib/agent-kit/mount.cjs`). */
 function onConnection(ws, service) {
