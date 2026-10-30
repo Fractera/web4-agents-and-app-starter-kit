@@ -277,6 +277,8 @@ async function spawnAgent(service, notice = () => {}, wanted = () => true, first
   const born = session.register({ service, pid: child.pid, proc: child, cwd, channel: viaChannel })
   born.taskUrls = new Set()
   born.pass = pass
+  // 615-6: кто родил сессию — человек (страница терминала, кнопка или «включить» Telegram) или узел (`wake` с `from`, ставит `wake`).
+  born.byPerson = true
   // 551-7: запуск со страницы с задачей из ссылки — вопрос доверия папке отвечает мост; согласие — нажатие, которое привело сюда.
   if (answerTrust) {
     born.answerTrust = true
@@ -585,6 +587,8 @@ async function wake(element, { text, from, about, declineUrl, confirmed, taskUrl
     }
     rememberTasks(live, urls)
     if (text && task) pasteWhenReady(live, text, { quietMs: 500 })
+    // 615-6: вставка узла (надзор, запрос элемента) в живую сессию главного агента — после неё человеку положен доклад (`done` сторожит).
+    if (text && task && from && modes.baseOf(service) === MAIN_AGENT) live.nodePasteAt = Date.now()
     return { ok: true, already: true }
   }
   // 409-3: бот элемента подключён — сначала вопрос человеку в Telegram; сессия родится по кнопке «Запустить» (`confirmed`).
@@ -597,6 +601,8 @@ async function wake(element, { text, from, about, declineUrl, confirmed, taskUrl
   const r = await spawnAgent(service, undefined, undefined, text && task ? `${text}\n\n${finishRule(service)}` : '', { pass, model, hold: true, callerTells })
   if (!r.ok) return { ok: false, reason: r.reason }
   rememberTasks(r.session, urls)
+  // 615-6: пробуждение с `from` — узел (надзор, задача главного агента, другой агент); без `from` — человек (кнопка, «включить»).
+  r.session.byPerson = !from
   // 547: агент включён пробуждением; кнопка «Включить» в Telegram — согласие и на папку.
   r.session.viaWake = true
   r.session.trustOk = Boolean(confirmed)
@@ -657,6 +663,12 @@ function languageRule(service, base) {
 async function done(service, { close = false, reviewed = false } = {}) {
   const live = session.current(service)
   if (!live) return { ok: false, reason: 'no-session' }
+  // 615-6 (✗ 2026-10-30 14:42: главный агент в разговоре выключил себя, не доложив ответ storage): в разговоре с человеком закрыться
+  // нельзя, пока после вставки узла не было ответа в Telegram. Время ответа пишет хук хода (`progress.cjs`, PostToolUse reply).
+  if (close && modes.baseOf(service) === MAIN_AGENT && live.byPerson && live.nodePasteAt && lastReplyAt(MAIN_AGENT) < live.nodePasteAt) {
+    console.log(`[agents/done] ${service}: закрытие отклонено — человек ждёт доклада после вставки узла`)
+    return { ok: false, reason: 'report-first: the architect is waiting in Telegram for your report on what the element did — send it with the reply tool first; you are in a conversation, only the word «выключить» turns you off' }
+  }
   // 552-4 (владелец 2026-10-20: «Узел закрывает её сам»): сессия рабочего процесса закрывается по «закончил», без вопроса.
   if (close || modes.modeOfKey(service) === 'work') {
     const t = setTimeout(() => { if (session.current(service) === live) session.stop(service, 'closed-by-agent') }, 1500)
@@ -695,6 +707,11 @@ async function done(service, { close = false, reviewed = false } = {}) {
     return { ok: true, closing: true, wokenByMain: true }
   }
   return telegram.askToClose(service, 'done', { reviewed: Boolean(live.reviewed) })
+}
+
+/** 615-6: когда агент последний раз ответил человеку в Telegram — пишет хук хода (`lib/agent-kit/progress.cjs`); нет записи — 0. */
+function lastReplyAt(element) {
+  try { return Number(JSON.parse(readFileSync(path.join(process.cwd(), 'data', 'node', 'progress', `replied-${element}.json`), 'utf8')).at) || 0 } catch { return 0 }
 }
 
 /** 592-3: агентов, которых включил главный агент, записывает его команда `task` (`scripts/main-agent-cli.mjs`, `markWoken`). */
