@@ -48,12 +48,13 @@
     {
       "id": "review",
       "slash": "review",
-      "words": { "ru": ["разбор"], "en": ["review"] },
+      "words": { "ru": ["разбор", "каждый раз ты добавляешь лишнее", "делай только то, что я прошу"], "en": ["review", "every time you add what I did not ask", "do only what I ask"] },
       "what": {
-        "ru": "Разбор — перед выключением агент элемента предложит, как улучшить свои навыки",
-        "en": "Review — before turning off, an element's agent suggests how to improve its skills"
+        "ru": "Разбор — скажите, что агент делает не так («каждый раз А и ещё Б — давай только А»): агент элемента разберёт свои навыки и предложит правки, решаете вы",
+        "en": "Review — say what the agent does that you do not want («every time A and also B — let it be only A»): the element's agent goes through its skills and proposes changes, you decide"
       },
       "by": "any",
+      "run": "npm run review -- <element id> \"<the person's words>\" — only on the person's word; the proposals come back to you, pass them on, bring their «yes» back with npm run task",
       "menu": false
     },
     {

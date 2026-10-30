@@ -28,6 +28,7 @@
 //   session context|clear [<id>] · session model opus|sonnet|haiku [<id>] — заполнение контекста, очистка, смена модели сессии (620)
 //   openai-key <sk-…> [--chat <id> --message <id>] — ключ OpenAI узла: проверка дверью ядра, запись, удаление сообщения с ключом (620)
 //   transcribe <файл> [--lang xx] — голосовое человека → текст дверью распознавания ядра; нет рабочего ключа — попросить /openai_key (617)
+//   review <id> "<слова человека>" — разбор элемента по слову человека: его недовольство первой причиной, расход сессии второй (571-6)
 // 🔒 Ничего не делается само: каждую команду запускает главный агент по слову человека или по событию надзора.
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs'
@@ -492,6 +493,47 @@ if (cmd === 'task') {
   // включала ли она элемент сама (✗ живой круг 2026-10-20: template остался включённым). `state` печатает, `close` стирает.
   if (b.ok && !b.pending) markWoken(id, !b.already)
   console.log(b.ok ? (b.pending ? `===TASK_OK=== ${id}: asked its person in Telegram to turn the agent on` : b.already ? `===TASK_OK=== ${id}: pasted into its live session` : `===TASK_OK=== ${id}: its agent woke with the task`) : `===TASK_FAIL=== ${id}: ${b.reason ?? r.status}${b.freeMb ? ` (free ${b.freeMb} MB, needs ${b.perSessionMb} MB — try later)` : ''}`)
+  process.exit(b.ok ? 0 : 1)
+}
+
+// 571-6 (владелец 2026-10-30, дословно: «право управлять разбором находится у главного агента … ответ главному агенту должен запустить
+// разбор внутри того же элемента»; «причина разбора это в меньшей степени высокий расход токенов а в большей степени то что пользователь
+// может быть недоволен результатом … каждый раз когда я тебе говорю сделать а ты делаешь а ну добавляешь туда б»; «только по моему
+// слову»): разбор элемента — только по слову человека. Слова недовольства — первая причина, расход последней сессии элемента — вторая
+// (571-5: запросы, новые токены, из кэша, выход — из его журнала, без модели). Предложения элемент присылает `npm run reply-core`, ты
+// передаёшь их человеку; правки — только после его «да», тем же путём (`npm run task`).
+if (cmd === 'review') {
+  const [id, ...words] = rest
+  const said = words.filter((w) => w !== '--dry').join(' ').trim()
+  if (!id || !said) fail('review <id> "<the person\'s words: what the element does that they do not want>"')
+  const e = registry().find((s) => s.id === id || addressOf(s.id) === id)
+  if (!e) fail(`no element ${id} in the registry`)
+  let cost = 'not measured (no session journal of this element)'
+  const folder = itemDir(e.id)
+  const dir = folder ? journalDir(folder) : null
+  const last = dir && existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.jsonl')).map((f) => ({ f, t: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.t - a.t)[0] : null
+  if (last) {
+    // Один ответ модели пишется в журнал несколькими строками с тем же message.id — считается один раз.
+    const seen = new Map()
+    for (const line of readFileSync(join(dir, last.f), 'utf8').split('\n')) {
+      try { const row = JSON.parse(line); if (row?.type === 'assistant' && row.message?.usage && row.message.id) seen.set(row.message.id, row.message.usage) } catch { /* строка не JSON */ }
+    }
+    const sum = (k) => [...seen.values()].reduce((a, u) => a + (u[k] ?? 0), 0)
+    const n = (x) => x.toLocaleString('en-US').replace(/,/g, ' ')
+    cost = `${seen.size} requests, ${n(sum('input_tokens') + sum('cache_creation_input_tokens'))} new tokens, ${n(sum('cache_read_input_tokens'))} from cache, ${n(sum('output_tokens'))} output (session ${last.f.slice(0, 8)})`
+  }
+  const text = `Build process: review (разбор). The person is not happy with how you do the work; their words, passed on by the node's main agent: «${said}». Run skill self-review. First reason — these words: what you keep doing that they do not want, and what to change so you do only what they ask. Second reason — the cost of your last session: ${cost}. Propose at most three changes to your skills or instruction and change nothing before the person's «yes»; send the proposals to the main agent: npm run reply-core -- "<the proposals, one line each>". The main agent brings you the answer.`
+  // `--dry` — показать поручение, ничего не включая и не меняя надзор (прибор и предпросмотр).
+  if (has('--dry')) { console.log(`===REVIEW_DRY=== ${e.id}\n${modes.withWord(text, 'build')}`); process.exit(0) }
+  // Согласие человека — его слово «разбор» тебе (548-20: ядро включает элемент без нажатий в Telegram). Надзор на один цикл: элемент
+  // включается без вопроса, а его «закончил» будит тебя с предложениями. Под надзором уже — надзор не трогается.
+  if (!supervision.byMain(e.id, ROOT)) supervision.set(e.id, 'main', { max: 1, root: ROOT })
+  const r = await core('/api/agents/wake', { method: 'POST', body: JSON.stringify({ service: e.id, text: modes.withWord(text, 'build'), from: 'main agent', about: firstSentence(`Review: ${said}`, 300), reason: 'main-agent-review', supervised: true }) }).catch((err) => fail(`the core did not answer: ${err.message}`))
+  const b = r.body ?? {}
+  if (b.ok && !b.pending) markWoken(e.id, !b.already)
+  console.log(b.ok
+    ? `===REVIEW_OK=== ${e.id}: ${b.pending ? 'asked its person in Telegram to turn the agent on' : b.already ? 'pasted into its live session' : 'its agent woke with the review'} · its last session: ${cost}. Its proposals come back to you (npm run state -- ${e.id}, «Report to you»): pass them to the person and bring the answer back with npm run task.`
+    : `===REVIEW_FAIL=== ${e.id}: ${b.reason ?? r.status}`)
   process.exit(b.ok ? 0 : 1)
 }
 
