@@ -6,7 +6,9 @@ import { isTemporaryPublicAddress } from "@/lib/auth/temporary-address"
 import { activationLink, channelState, isService, saveMessages, saveToken, startIdlePoller } from "../../_agent-kit/server/telegram.cjs"
 import { isBornItem } from "../../_agent-kit/server/workspace.cjs"
 import * as slots from "../../_agent-kit/server/telegram-slots.cjs"
+import { findTreePath, treeVisible } from "@/lib/web4-items/item-tree"
 import { writePassportField } from "@/lib/web4-items/passport-file"
+import { treeContextOf } from "@/lib/web4-items/tree-context"
 
 // БОТ TELEGRAM АГЕНТА СЛУЖБЫ (267-3; в маршруте службы — 271).
 // 🔒 ДВЕРЬ КОПИИ КОМПЛЕКТА АГЕНТА (271): шаблон `kits/_agent-kit/api/*/route.ts.tpl`, установщик подставил
@@ -44,6 +46,17 @@ const unknown = () => NextResponse.json({ ok: false, error: "unknown-service" },
 // токена боты элемента (без токенов) уходят в его паспорт полем `telegramBots`.
 const badSlot = () => NextResponse.json({ ok: false, error: "unknown-slot" }, { status: 400 })
 
+// 🔒 Ячейка открыта, только если меню элемента показывает её страницу — та же проверка, что у дерева (`treeVisible`): у нативного
+// элемента нет H2H и «Рабочего процесса» (544, 551), на едином проекте нет Messenger (553). ✗ Партия 2026-10-30: нативные получили
+// группы навыков (552-7), и дверь стала принимать им ботов H2H и заказов, которых их меню не показывает.
+const SLOT_PAGES: Record<string, string> = { h2h: "messenger/h2h/telegram", orders: "workflow/a2a-orders/telegram", work: "workflow/a2a-work/telegram" }
+function slotOpen(service: string, slot: string): boolean {
+  if (!slots.isExtra(slot) || !slots.grouped(service)) return false
+  const trail = findTreePath(SLOT_PAGES[slot].split("/"))
+  const ctx = treeContextOf(service)
+  return !!trail && trail.every((p) => treeVisible(p, ctx))
+}
+
 async function savePassport(service: string) {
   if (!slots.grouped(service)) return
   // В паспорт — только то, что не меняется само: ручка и имя; число допущенных живое, его отдаёт дверь ядра `/api/agents/telegram`.
@@ -57,7 +70,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   const service = await serviceOf(ctx)
   if (!service || !isService(service)) return unknown()
   const slot = req.nextUrl.searchParams.get("slot")
-  if (slot) return slots.isExtra(slot) && slots.grouped(service) ? NextResponse.json({ ok: true, ...slots.state(service, slot) }, noStore) : badSlot()
+  if (slot) return slotOpen(service, slot) ? NextResponse.json({ ok: true, ...slots.state(service, slot) }, noStore) : badSlot()
   return NextResponse.json({ ok: true, ...channelState(service) }, noStore)
 }
 
@@ -69,7 +82,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const body = (await req.json().catch(() => null)) as { action?: string; token?: string; messages?: unknown; slot?: string } | null
   if (body?.slot) {
     const slot = body.slot
-    if (!slots.isExtra(slot) || !slots.grouped(service)) return badSlot()
+    if (!slotOpen(service, slot)) return badSlot()
     if (body.action === "token") {
       const saved = await slots.saveToken(service, slot, body.token)
       if ((saved as { ok?: boolean })?.ok) await savePassport(service)
